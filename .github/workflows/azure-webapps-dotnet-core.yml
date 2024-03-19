@@ -75,12 +75,21 @@ jobs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
-      - uses: azure/login@v1
+      - name: Azure login
+        uses: azure/login@v2
         with:
+          auth-type: IDENTITY
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8F9F7A9065A94E829D877F2D8D007EA6 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E59CD09D1D1F405AA7C62E286ABBBDA4 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_256FCBF228EC44FAA973E4A43861AE89 }}
-          
+      
+      - name: Azure CLI script
+        uses: azure/CLI@v1
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az account show
+
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
