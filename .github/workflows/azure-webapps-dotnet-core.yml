@@ -74,6 +74,12 @@ jobs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
+      - uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8F9F7A9065A94E829D877F2D8D007EA6 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E59CD09D1D1F405AA7C62E286ABBBDA4 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_256FCBF228EC44FAA973E4A43861AE89 }}
+          
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
@@ -81,8 +87,11 @@ jobs:
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: logout
+        run: |
+          az logout
