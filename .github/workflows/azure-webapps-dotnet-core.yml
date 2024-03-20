@@ -63,7 +63,7 @@ jobs:
       # Replace values in appsettings.json
       - name: Replace JSON values
         env:
-          JSON_FILE_PATH: $GITHUB_WORKSPACE/DoubleKeyEncryptionService/src/customer-key-store/appsettings.json
+          JSON_FILE_PATH: $GITHUB_WORKSPACE/src/customer-key-store/appsettings.json
           VALUE_CLIENT_ID: ${{ secrets.VALUE_CLIENT_ID }}
           VALUE_TENANT_ID: ${{ secrets.VALUE_TENANT_ID }}
           VALUE_URL: ${{ secrets.VALUE_URL }}
