@@ -80,7 +80,7 @@ jobs:
           node $GITHUB_WORKSPACE/src/customer-key-store/scripts/replaceValues.js $JSON_FILE_PATH $VALUE_CLIENT_ID $VALUE_TENANT_ID $VALUE_URL $VALUE_KEY_NAME $VALUE_GUID $VALUE_EMAILS $VALUE_PUBLIC_PEM $VALUE_PRIVATE_PEM
       
       - name: Display updated JSON file
-        run: cat $JSON_FILE_PATH
+        run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
 
       - name: Build with dotnet
         run: dotnet build --configuration Release
