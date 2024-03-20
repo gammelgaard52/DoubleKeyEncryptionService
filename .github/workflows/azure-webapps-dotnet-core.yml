@@ -45,6 +45,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # List files in folder
+      - name: List files in folder
+        run: ls $GITHUB_WORKSPACE/src/customer-key-store
+
       # Generate GUID
       - name: Generate GUID
         id: generate_guid
