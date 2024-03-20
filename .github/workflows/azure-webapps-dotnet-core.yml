@@ -48,7 +48,8 @@ jobs:
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365
+          current_date=$(date +"%Y-%m-%d")
+          openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -passout pass:"$current_date"
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem
 
