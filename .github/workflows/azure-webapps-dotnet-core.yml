@@ -78,7 +78,12 @@ jobs:
           VALUE_PRIVATE_PEM: $(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)
         run: |
           node $GITHUB_WORKSPACE/src/customer-key-store/scripts/replaceValues.js $JSON_FILE_PATH $VALUE_CLIENT_ID $VALUE_TENANT_ID $VALUE_URL $VALUE_KEY_NAME $VALUE_GUID $VALUE_EMAILS $VALUE_PUBLIC_PEM $VALUE_PRIVATE_PEM
-
+      
+      # Check if scripts failed    
+      - name: Check if script encountered errors
+        if: ${{ failure() }}
+        run: exit 1
+      
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
