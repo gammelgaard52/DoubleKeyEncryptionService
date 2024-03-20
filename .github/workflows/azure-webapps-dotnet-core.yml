@@ -45,11 +45,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Generate GUID
+      - name: Generate GUID
+        id: generate_guid
+        run: echo "::set-output name=guid::$(cat /proc/sys/kernel/random/uuid)"
+
+      - name: Set up Environment
+        run: echo "GUID=${{ steps.generate_guid.outputs.guid }}" >> $GITHUB_ENV
+
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          current_date=$(date +"%Y-%m-%d")
-          openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -passout pass:"$current_date" -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey Unit/CN=CloudkeyDKE"
+          openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -passout pass:$GUID -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey Unit/CN=CloudkeyDKE"
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem
 
@@ -61,7 +68,7 @@ jobs:
           VALUE_TENANT_ID: ${{ secrets.VALUE_TENANT_ID }}
           VALUE_URL: ${{ secrets.VALUE_URL }}
           VALUE_KEY_NAME: ${{ secrets.VALUE_KEY_NAME }}
-          VALUE_GUID: ${{ secrets.VALUE_GUID }}
+          VALUE_GUID: $GUID
           VALUE_EMAILS: ${{ secrets.VALUE_EMAILS }}
           VALUE_PUBLIC_PEM: $(openssl x509 -pubkey -noout -in $GITHUB_WORKSPACE/cert.pem)
           VALUE_PRIVATE_PEM: $(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)
