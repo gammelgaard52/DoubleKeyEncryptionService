@@ -49,7 +49,7 @@ jobs:
       - name: Generate SSL Keys
         run: |
           current_date=$(date +"%Y-%m-%d")
-          openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -passout pass:"$current_date"
+          openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -passout pass:"$current_date" -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey Unit/CN=CloudkeyDKE"
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem
 
