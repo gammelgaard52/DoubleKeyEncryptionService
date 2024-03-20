@@ -1,22 +1,3 @@
-# This workflow will build and push a .NET Core app to an Azure Web App when a commit is pushed to your default branch.
-#
-# This workflow assumes you have already created the target Azure App Service web app.
-# For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-dotnetcore?tabs=net60&pivots=development-environment-vscode
-#
-# To configure this workflow:
-#
-# 1. Download the Publish Profile for your Azure Web App. You can download this file from the Overview page of your Web App in the Azure Portal.
-#    For more information: https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
-#
-# 2. Create a secret in your repository named AZURE_WEBAPP_PUBLISH_PROFILE, paste the publish profile contents as the value of the secret.
-#    For instructions on obtaining the publish profile see: https://docs.microsoft.com/azure/app-service/deploy-github-actions#configure-the-github-secret
-#
-# 3. Change the value for the AZURE_WEBAPP_NAME. Optionally, change the AZURE_WEBAPP_PACKAGE_PATH and DOTNET_VERSION environment variables below.
-#
-# For more information on GitHub Actions for Azure: https://github.com/Azure/Actions
-# For more information on the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples
-
 name: Build and deploy ASP.Net Core app to an Azure Web App
 
 env:
@@ -38,12 +19,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
+      
+      # Configure .Net
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # Configure Javascript
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      
+      # Setup dependencies for .Net
       - name: Set up dependency caching for faster builds
         uses: actions/cache@v3
         with:
@@ -51,6 +40,32 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
+      # Setup dependencies for Javascript
+      - name: Install dependencies
+        run: npm install
+
+      # Create encryption keys
+      - name: Generate SSL Keys
+        run: |
+          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem
+
+      # Replace values in appsettings.json
+      - name: Replace JSON values
+        env:
+          JSON_FILE_PATH: $GITHUB_WORKSPACE/src/customer-key-store/appsettings.json
+          VALUE_CLIENT_ID: ${{ secrets.VALUE_CLIENT_ID }}
+          VALUE_TENANT_ID: ${{ secrets.VALUE_TENANT_ID }}
+          VALUE_URL: ${{ secrets.VALUE_URL }}
+          VALUE_KEY_NAME: ${{ secrets.VALUE_KEY_NAME }}
+          VALUE_GUID: ${{ secrets.VALUE_GUID }}
+          VALUE_EMAILS: ${{ secrets.VALUE_EMAILS }}
+          VALUE_PUBLIC_PEM: $(openssl x509 -pubkey -noout -in $GITHUB_WORKSPACE/cert.pem)
+          VALUE_PRIVATE_PEM: $(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)
+        run: |
+          node $GITHUB_WORKSPACE/src/customer-key-store/scripts/replaceValues.js $JSON_FILE_PATH $VALUE_CLIENT_ID $VALUE_TENANT_ID $VALUE_URL $VALUE_KEY_NAME $VALUE_GUID $VALUE_EMAILS $VALUE_PUBLIC_PEM $VALUE_PRIVATE_PEM
 
       - name: Build with dotnet
         run: dotnet build --configuration Release
