@@ -73,6 +73,11 @@ file_path_cert_private = os.environ.get('newPrivatePem')
 cert_public_key_content = read_key(file_path_cert_public)
 cert_private_key_content = read_key(file_path_cert_private)
 
+# Print certificate content
+print("Certificate content (single line):")
+print(cert_public_key_content)
+print(cert_private_key_content)
+
 # Example usage:
 file_path_json = os.environ.get('JSON_FILE_PATH')  # Change this to the path of your JSON file
 updates = {

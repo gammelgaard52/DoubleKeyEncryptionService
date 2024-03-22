@@ -25,12 +25,6 @@ jobs:
         uses: actions/setup-dotnet@v2
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      # Configure Javascript
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
       
       # Setup dependencies for .Net
       - name: Set up dependency caching for faster builds
@@ -40,10 +34,6 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
-
-      # Setup dependencies for Javascript
-      - name: Install dependencies
-        run: npm install
 
       # List files in folder
       - name: List files in folder
@@ -74,7 +64,7 @@ jobs:
           echo "newJwtAudience=new_jwt_audience_url" >> $GITHUB_ENV
           echo "newValueKeyName=new_test_key_name" >> $GITHUB_ENV
           echo "newValueKeyId=$newGUID" >> $GITHUB_ENV
-          echo "newValueEmail="email1@example.com","email2@example.com"" >> $GITHUB_ENV
+          echo "newValueEmail='"email1@example.com","email2@example.com"'" >> $GITHUB_ENV
           echo "newPublicPem=$GITHUB_WORKSPACE/cert.pem" >> $GITHUB_ENV
           echo "newPrivatePem=$GITHUB_WORKSPACE/privkeynopass.pem" >> $GITHUB_ENV
   
