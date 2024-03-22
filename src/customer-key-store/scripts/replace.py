@@ -1,6 +1,7 @@
 import os
 import json
 
+# Define logic to update the JSON
 def update_json(file_path, updates):
     try:
         with open(file_path, 'r') as file:
@@ -34,6 +35,7 @@ def update_json(file_path, updates):
     except Exception as e:
         print("Error occurred while updating the JSON file:", e)
 
+# Define logic to extract certificate data
 def read_key(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -65,26 +67,28 @@ def read_key(file_path):
         print("Key file not found.")
         return None
 
-# File paths for certificate files
-file_path_cert_public = os.environ.get('newPublicPem')  
-file_path_cert_private = os.environ.get('newPrivatePem')
+# Define logic to convert comma separated into array
+def convert_to_list(value):
+    # Split the string into a list
+    list = value.split(',')
+    # Strip leading and trailing whitespace from each entry
+    list = [data.strip() for data in list]
+    return list
 
 # Read the content of certificate files
-cert_public_key_content = read_key(file_path_cert_public)
-cert_private_key_content = read_key(file_path_cert_private)
+cert_public_key_content = read_key(os.environ.get('newPublicPem'))
+cert_private_key_content = read_key(os.environ.get('newPrivatePem'))
 
-# Read newValueEmail environment variable
-newValueEmail = os.environ.get('newValueEmail')
-
-# Split the string into a list of email addresses
-authorized_email_addresses = [email.strip() for email in newValueEmail.split(',')]
+# Split the strings into arrays
+authorized_email_addresses = convert_to_list(os.environ.get('newValueEmail'))
+validIssuers = convert_to_list(os.environ.get('newValidIssuer'))
 
 # Example usage:
 file_path_json = os.environ.get('JSON_FILE_PATH')  # Change this to the path of your JSON file
 updates = {
     "AzureAd.ClientId": os.environ.get('newClientId'),
     "AzureAd.TenantId": os.environ.get('newTenantId'),
-    "AzureAd.TokenValidationParameters.ValidIssuers": [os.environ.get('newValidIssuer')],
+    "AzureAd.TokenValidationParameters.ValidIssuers": validIssuers,
     "JwtAudience": os.environ.get('newJwtAudience'),
     "TestKeys.0.Name": os.environ.get('newValueKeyName'),
     "TestKeys.0.Id": os.environ.get('newValueKeyId'),
