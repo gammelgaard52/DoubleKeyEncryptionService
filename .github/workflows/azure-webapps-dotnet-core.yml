@@ -50,7 +50,7 @@ jobs:
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:$newGUID -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=CloudkeyDKE"
+          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:$newGUID -subj "${{vars.KEY_ATTRIBUTES}}"
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$newGUID
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$newGUID
 
@@ -58,13 +58,13 @@ jobs:
       - name: Set environment variables
         run: |
           echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
-          echo "newClientId=your_new_client_id" >> $GITHUB_ENV
+          echo "newClientId=${{vars.DKE_CLIENT_ID}}" >> $GITHUB_ENV
           echo "newTenantId=${{ secrets.AZUREAPPSERVICE_TENANTID_E59CD09D1D1F405AA7C62E286ABBBDA4 }}" >> $GITHUB_ENV
-          echo "newValidIssuer="https://sts.windows.net/valueTenantId1/","https://sts.windows.net/valueTenantId2/"" >> $GITHUB_ENV
-          echo "newJwtAudience=new_jwt_audience_url" >> $GITHUB_ENV
-          echo "newValueKeyName=new_test_key_name" >> $GITHUB_ENV
+          echo "newValidIssuer=${{vars.VALID_ISSUER}}" >> $GITHUB_ENV
+          echo "newJwtAudience=${{vars.JWT_AUDIENCE_URL}}" >> $GITHUB_ENV
+          echo "newValueKeyName=${{vars.KEY_NAME}}" >> $GITHUB_ENV
           echo "newValueKeyId=$newGUID" >> $GITHUB_ENV
-          echo "newValueEmail=email1@example.com,email2@example.com" >> $GITHUB_ENV
+          echo "newValueEmail=${{vars.EMAILS}}" >> $GITHUB_ENV
           echo "newPublicPem=$GITHUB_WORKSPACE/pubkeyonly.pem" >> $GITHUB_ENV
           echo "newPrivatePem=$GITHUB_WORKSPACE/privkeynopass.pem" >> $GITHUB_ENV
   
@@ -74,6 +74,7 @@ jobs:
       
       # Show the updated JSON
       - name: Display updated JSON file
+        if: false  # Disable the step
         run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
 
       # Build the application
