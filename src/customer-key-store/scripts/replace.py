@@ -73,10 +73,11 @@ file_path_cert_private = os.environ.get('newPrivatePem')
 cert_public_key_content = read_key(file_path_cert_public)
 cert_private_key_content = read_key(file_path_cert_private)
 
-# Print certificate content
-print("Certificate content (single line):")
-print(cert_public_key_content)
-print(cert_private_key_content)
+# Read newValueEmail environment variable
+newValueEmail = os.environ.get('newValueEmail')
+
+# Split the string into a list of email addresses
+authorized_email_addresses = [email.strip() for email in newValueEmail.split(',')]
 
 # Example usage:
 file_path_json = os.environ.get('JSON_FILE_PATH')  # Change this to the path of your JSON file
@@ -87,7 +88,7 @@ updates = {
     "JwtAudience": os.environ.get('newJwtAudience'),
     "TestKeys.0.Name": os.environ.get('newValueKeyName'),
     "TestKeys.0.Id": os.environ.get('newValueKeyId'),
-    "TestKeys.0.AuthorizedEmailAddress": [os.environ.get('newValueEmail')],
+    "TestKeys.0.AuthorizedEmailAddress": authorized_email_addresses,
     "TestKeys.0.PublicPem": cert_public_key_content,
     "TestKeys.0.PrivatePem": cert_private_key_content
 }
