@@ -34,12 +34,17 @@ def update_json(file_path, updates):
         print("Error occurred while updating the JSON file:", e)
 
 # Example usage:
-file_path = "C:\\VSC\\DoubleKeyEncryptionService-1\\src\\customer-key-store\\appsettings.json"  # Change this to the path of your JSON file
+file_path = "JSON_FILE_PATH"  # Change this to the path of your JSON file
 updates = {
-    "AzureAd.ClientId": "newClientId",
-    "JwtAudience": "newValueUrl",
-    "TestKeys.0.Name": "newValueKeyName",
-    "TestKeys.0.AuthorizedEmailAddress": ["newValueEmail1", "newValueEmail2"]
+    "AzureAd.ClientId": os.environ.get('newClientId'),
+    "AzureAd.TenantId": os.environ.get('newTenantId'),
+    "AzureAd.TokenValidationParameters.ValidIssuers": [os.environ.get('newValidIssuer')],
+    "JwtAudience": os.environ.get('newJwtAudience'),
+    "TestKeys.0.Name": os.environ.get('newValueKeyName'),
+    "TestKeys.0.Id": os.environ.get('newValueKeyId'),
+    "TestKeys.0.AuthorizedEmailAddress": [os.environ.get('newValueEmail')],
+    "TestKeys.0.PublicPem": os.environ.get('newPublicPem'),
+    "TestKeys.0.PrivatePem": os.environ.get('newPrivatePem')
 }
 
 update_json(file_path, updates)

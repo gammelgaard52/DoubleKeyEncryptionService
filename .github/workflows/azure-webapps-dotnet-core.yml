@@ -55,33 +55,38 @@ jobs:
         run: echo "::set-output name=guid::$(cat /proc/sys/kernel/random/uuid)"
 
       - name: Set up Environment
-        run: echo "GUID=${{ steps.generate_guid.outputs.guid }}" >> $GITHUB_ENV
+        run: echo "newGUID=${{ steps.generate_guid.outputs.guid }}" >> $GITHUB_ENV
 
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:$GUID -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=CloudkeyDKE"
-          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$GUID
-          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$GUID
+          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:$newGUID -subj "/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=CloudkeyDKE"
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$newGUID
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$newGUID
 
-      # Replace values in appsettings.json
-      - name: Replace JSON values
-        env:
-          JSON_FILE_PATH: "${{ github.workspace }}/src/customer-key-store/appsettings.json"
-          VALUE_CLIENT_ID: ${{ secrets.VALUE_CLIENT_ID }}
-          VALUE_TENANT_ID: ${{ secrets.VALUE_TENANT_ID }}
-          VALUE_URL: ${{ secrets.VALUE_URL }}
-          VALUE_KEY_NAME: ${{ secrets.VALUE_KEY_NAME }}
-          VALUE_GUID: $GUID
-          VALUE_EMAILS: ${{ secrets.VALUE_EMAILS }}
-          VALUE_PUBLIC_PEM: $(openssl x509 -pubkey -noout -in $GITHUB_WORKSPACE/cert.pem)
-          VALUE_PRIVATE_PEM: $(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)
+      # Set variables
+      - name: Set environment variables
         run: |
-          node $GITHUB_WORKSPACE/src/customer-key-store/scripts/replaceValues.js $JSON_FILE_PATH $VALUE_CLIENT_ID $VALUE_TENANT_ID $VALUE_URL $VALUE_KEY_NAME $VALUE_GUID $VALUE_EMAILS $VALUE_PUBLIC_PEM $VALUE_PRIVATE_PEM
+          echo "JSON_FILE_PATH="${{ github.workspace }}\\src\\customer-key-store\\appsettings.json"" >> $GITHUB_ENV
+          echo "newClientId=your_new_client_id" >> $GITHUB_ENV
+          echo "newTenantId=${{ secrets.AZUREAPPSERVICE_TENANTID_E59CD09D1D1F405AA7C62E286ABBBDA4 }}" >> $GITHUB_ENV
+          echo "newValidIssuer="https://sts.windows.net/valueTenantId1/","https://sts.windows.net/valueTenantId2/"" >> $GITHUB_ENV
+          echo "newJwtAudience=new_jwt_audience_url" >> $GITHUB_ENV
+          echo "newValueKeyName=new_test_key_name" >> $GITHUB_ENV
+          echo "newValueKeyId=$newGUID" >> $GITHUB_ENV
+          echo "newValueEmail="email1@example.com","email2@example.com"" >> $GITHUB_ENV
+          echo "newPublicPem=$(openssl x509 -pubkey -noout -in $GITHUB_WORKSPACE/cert.pem)" >> $GITHUB_ENV
+          echo "newPrivatePem=$(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)" >> $GITHUB_ENV
+  
+      # Replace values in appsettings.json
+      - name: Update JSON file
+        run: python replaceValues.py
       
+      # Show the updated JSON
       - name: Display updated JSON file
         run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
 
+      # Build the application
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
