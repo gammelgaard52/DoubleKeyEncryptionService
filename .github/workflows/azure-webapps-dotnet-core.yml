@@ -54,6 +54,16 @@ jobs:
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$newGUID
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$newGUID
 
+      # Save certificates for debug purpose
+      - name: Archive Certificates
+        uses: actions/upload-artifact@v2
+        if: true  # Enable or disable the step
+        with:
+          name: certificates
+          path: |
+            $GITHUB_WORKSPACE/privkeynopass.pem
+            $GITHUB_WORKSPACE/pubkeyonly.pem
+
       # Set variables
       - name: Set environment variables
         run: |
