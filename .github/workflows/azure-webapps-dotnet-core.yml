@@ -54,16 +54,6 @@ jobs:
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$newGUID
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$newGUID
 
-      # Save certificates for debug purpose
-      - name: Archive Certificates
-        uses: actions/upload-artifact@v2
-        if: true  # Enable or disable the step
-        with:
-          name: certificates
-          path: |
-            privkeynopass.pem
-            pubkeyonly.pem
-
       # Set variables
       - name: Set environment variables
         run: |
@@ -89,16 +79,26 @@ jobs:
 
       # Build the application
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build ${{ github.workspace }}\src\customer-key-store\customerkeystore.csproj --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ${{ github.workspace }}\src\customer-key-store\customerkeystore.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v3
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
+      
+      # Save certificates for debug purpose
+      - name: Archive Certificates
+        uses: actions/upload-artifact@v2
+        if: true  # Enable or disable the step
+        with:
+          name: certificates
+          path: |
+            privkeynopass.pem
+            pubkeyonly.pem
 
   deploy:
     runs-on: ubuntu-latest
