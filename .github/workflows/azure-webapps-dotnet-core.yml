@@ -75,12 +75,12 @@ jobs:
           echo "newValueKeyName=new_test_key_name" >> $GITHUB_ENV
           echo "newValueKeyId=$newGUID" >> $GITHUB_ENV
           echo "newValueEmail="email1@example.com","email2@example.com"" >> $GITHUB_ENV
-          echo "newPublicPem="$(openssl x509 -pubkey -noout -in $GITHUB_WORKSPACE/cert.pem)"" >> $GITHUB_ENV
-          echo "newPrivatePem="$(openssl rsa -in $GITHUB_WORKSPACE/privkeynopass.pem)"" >> $GITHUB_ENV
+          echo "newPublicPem=$GITHUB_WORKSPACE/cert.pem" >> $GITHUB_ENV
+          echo "newPrivatePem=$GITHUB_WORKSPACE/privkeynopass.pem" >> $GITHUB_ENV
   
       # Replace values in appsettings.json
       - name: Update JSON file
-        run: python replaceValues.py
+        run: python ${{ github.workspace }}/src/customer-key-store/scripts/replace.py
       
       # Show the updated JSON
       - name: Display updated JSON file
