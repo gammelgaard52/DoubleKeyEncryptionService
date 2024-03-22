@@ -61,8 +61,8 @@ jobs:
         with:
           name: certificates
           path: |
-            $GITHUB_WORKSPACE/privkeynopass.pem
-            $GITHUB_WORKSPACE/pubkeyonly.pem
+            privkeynopass.pem
+            pubkeyonly.pem
 
       # Set variables
       - name: Set environment variables
