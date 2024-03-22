@@ -74,7 +74,7 @@ jobs:
       
       # Show the updated JSON
       - name: Display updated JSON file
-        if: false  # Disable the step
+        if: true  # Enable or disable the step
         run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
 
       # Build the application
