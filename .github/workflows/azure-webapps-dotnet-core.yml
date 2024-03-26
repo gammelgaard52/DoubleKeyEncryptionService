@@ -74,7 +74,7 @@ jobs:
       
       # Show the updated JSON
       - name: Display updated JSON file
-        if: true  # Enable or disable the step
+        if: false  # Enable or disable the step
         run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
 
       # Build the application
@@ -93,7 +93,7 @@ jobs:
       # Save certificates for debug purpose
       - name: Archive Certificates
         uses: actions/upload-artifact@v2
-        if: true  # Enable or disable the step
+        if: false  # Enable or disable the step
         with:
           name: certificates
           path: |
