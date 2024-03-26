@@ -35,21 +35,8 @@ def update_json(file_path, updates):
     except Exception as e:
         print("Error occurred while updating the JSON file:", e)
 
-# Define logic to extract certificate data
-def decode_utf16le_text(encoded_text):
-    decoded_text = encoded_text.decode('utf-16le')
-    # Remove lines containing "BEGIN" or "END"
-    decoded_text = '\n'.join(line for line in decoded_text.splitlines() if 'BEGIN' not in line and 'END' not in line)
-    return decoded_text.replace('\n', '').replace('\r', '')
-
-def read_public_key(file_path):
-    with open(file_path, 'rb') as file:
-        encoded_text = file.read()
-        decoded_text = decode_utf16le_text(encoded_text)
-        return decoded_text
-
-# Define logic private key
-def read_private_key(file_path):
+# Define logic to read key
+def read_key(file_path):
     try:
         with open(file_path, 'r') as file:
             lines = file.readlines()
@@ -89,8 +76,8 @@ def convert_to_list(value):
     return list
 
 # Read the content of certificate files
-cert_public_key_content = read_private_key(os.environ.get('newPublicPem'))
-cert_private_key_content = read_private_key(os.environ.get('newPrivatePem'))
+cert_public_key_content = read_key(os.environ.get('newPublicPem'))
+cert_private_key_content = read_key(os.environ.get('newPrivatePem'))
 
 # Split the strings into arrays
 authorized_email_addresses = convert_to_list(os.environ.get('newValueEmail'))
