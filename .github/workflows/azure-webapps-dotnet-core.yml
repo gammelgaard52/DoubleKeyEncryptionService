@@ -51,7 +51,7 @@ jobs:
       - name: Generate SSL Keys
         run: |
           openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:$newGUID -subj "${{vars.KEY_ATTRIBUTES}}"
-          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -passin pass:$newGUID
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -traditional -passin pass:$newGUID
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:$newGUID
 
       # Set variables
