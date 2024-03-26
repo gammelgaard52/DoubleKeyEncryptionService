@@ -36,22 +36,35 @@ def update_json(file_path, updates):
         print("Error occurred while updating the JSON file:", e)
 
 # Define logic to extract certificate data
-def read_key(file_path):
+def decode_utf16le_text(encoded_text):
+    decoded_text = encoded_text.decode('utf-16le')
+    # Remove lines containing "BEGIN" or "END"
+    decoded_text = '\n'.join(line for line in decoded_text.splitlines() if 'BEGIN' not in line and 'END' not in line)
+    return decoded_text.replace('\n', '').replace('\r', '')
+
+def read_public_key(file_path):
+    with open(file_path, 'rb') as file:
+        encoded_text = file.read()
+        decoded_text = decode_utf16le_text(encoded_text)
+        return decoded_text
+
+# Define logic private key
+def read_private_key(file_path):
     try:
         with open(file_path, 'r') as file:
             lines = file.readlines()
         
-        # Skip lines until "BEGIN PRIVATE KEY" or "BEGIN PUBLIC KEY" is found
+        # Skip lines until "BEGIN" is found
         start_index = None
         for i, line in enumerate(lines):
-            if "BEGIN PRIVATE KEY" in line or "BEGIN PUBLIC KEY" in line:
+            if "BEGIN" in line:
                 start_index = i + 1
                 break
         
-        # Skip lines until "END PRIVATE KEY" or "END PUBLIC KEY" is found
+        # Skip lines until "END" is found
         end_index = None
         for i, line in enumerate(lines[start_index:]):
-            if "END PRIVATE KEY" in line or "END PUBLIC KEY" in line:
+            if "END" in line:
                 end_index = start_index + i
                 break
         
@@ -62,7 +75,7 @@ def read_key(file_path):
         key_content = key_content.strip().replace("\n", "")
         
         return key_content
-    
+
     except FileNotFoundError:
         print("Key file not found.")
         return None
@@ -76,8 +89,8 @@ def convert_to_list(value):
     return list
 
 # Read the content of certificate files
-cert_public_key_content = read_key(os.environ.get('newPublicPem'))
-cert_private_key_content = read_key(os.environ.get('newPrivatePem'))
+cert_public_key_content = read_public_key(os.environ.get('newPublicPem'))
+cert_private_key_content = read_private_key(os.environ.get('newPrivatePem'))
 
 # Split the strings into arrays
 authorized_email_addresses = convert_to_list(os.environ.get('newValueEmail'))
