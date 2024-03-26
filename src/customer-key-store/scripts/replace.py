@@ -89,7 +89,7 @@ def convert_to_list(value):
     return list
 
 # Read the content of certificate files
-cert_public_key_content = read_public_key(os.environ.get('newPublicPem'))
+cert_public_key_content = read_private_key(os.environ.get('newPublicPem'))
 cert_private_key_content = read_private_key(os.environ.get('newPrivatePem'))
 
 # Split the strings into arrays
