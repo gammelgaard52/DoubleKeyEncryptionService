@@ -115,12 +115,10 @@ jobs:
         with:
           name: .net-app
 
-      - name: Azure login
-        uses: azure/login@v1
+      # Login to Azure
+      - uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8F9F7A9065A94E829D877F2D8D007EA6 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E59CD09D1D1F405AA7C62E286ABBBDA4 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_256FCBF228EC44FAA973E4A43861AE89 }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
       
       - name: Azure CLI script
         uses: azure/CLI@v1
