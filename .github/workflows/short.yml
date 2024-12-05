@@ -1,0 +1,64 @@
+name: Build and deploy ASP.Net Core app to an Azure Web App
+
+env:
+  AZURE_WEBAPP_NAME: app-demo-dke-december    # set this to the name of your Azure Web App
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: '8.*'                 # set this to the .NET Core version to use
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app-registration:
+    runs-on: ubuntu-latest
+
+    steps:   
+    - uses: actions/checkout@v3
+
+    # Login to Azure
+    - uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+  
+    # Show account
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az account show
+  
+    # Create app
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          output=$(az ad app create --display-name ${{ env.AZURE_WEBAPP_NAME }}-${{ github.run_id }})
+          objectId=$(echo "$output" | jq -r '.id')
+          echo "output=$output"  # Debugging output
+          echo "objectId=$objectId"  # Debugging output
+          echo "objectId=$objectId" >> $GITHUB_ENV
+  
+    # Update app with DKE configuration (configuration related to the DKE)
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          manifest_main=$(cat iac/application/dke/manifest_main.json)
+          az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" --body "$manifest_main"
+  
+    # Update app with API configuration (client applications that can access the DKE)
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          manifest_api=$(cat iac/application/dke/manifest_api.json)
+          az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" --body "$manifest_api"
