@@ -1,0 +1,13 @@
+{
+    "action": "selfActivate",
+    "principalId": "1471a19a-4a73-4d2d-9547-3156013dc000",
+    "roleDefinitionId": "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3",
+    "directoryScopeId": "/",
+    "justification": "I need access to the Application Administrator role to manage application registration to be created for DKE",
+    "scheduleInfo": {
+        "expiration": {
+            "type": "AfterDuration",
+            "duration": "PT5H"
+        }
+    }
+}
