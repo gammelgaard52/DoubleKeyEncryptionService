@@ -40,7 +40,10 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |      
-          az rest --method POST --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests" --body @{iac/application/dke/permission.json}
+          az rest --method POST \
+          --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests" \
+          --body @iac/application/dke/permission.json \
+          --headers "Content-Type=application/json"
   
     # Create app
     - name: create app
@@ -60,7 +63,10 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" --body @{iac/application/dke/manifest_main.json}
+          az rest --method PATCH \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" \
+          --body @iac/application/dke/manifest_main.json \
+          --headers "Content-Type=application/json"
   
     # Update app with API configuration (client applications that can access the DKE)
     - name: update manifest API
@@ -68,4 +74,7 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" --body @{iac/application/dke/manifest_api.json}
+          az rest --method PATCH \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" \
+          --body @iac/application/dke/manifest_api.json \
+          --headers "Content-Type=application/json"
