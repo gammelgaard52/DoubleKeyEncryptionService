@@ -41,7 +41,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           # Update permission.json with the new principalId using jq (in-place)
-          jq --arg principalId "${{ vars.SP_GRP_OBJECT_ID }}" \ # This must be the groups object ID, since it's the group that has the PIM permission and not the members.
+          jq --arg principalId ${{ vars.SP_GRP_OBJECT_ID }} \ # This must be the groups object ID, since it's the group that has the PIM permission and not the members.
             '.principalId = $principalId' \
             iac/application/dke/permission.json -i
                               
