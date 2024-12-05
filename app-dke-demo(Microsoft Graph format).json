@@ -1,0 +1,126 @@
+{
+	"id": "3fbc3d90-3e3f-48ba-b82c-f1e26ae457aa",
+	"deletedDateTime": null,
+	"appId": "8bff5a2c-8442-44ad-934c-81c301ccf0e8",
+	"applicationTemplateId": null,
+	"disabledByMicrosoftStatus": null,
+	"createdDateTime": "2023-03-28T09:58:50Z",
+	"displayName": "app-dke-demo",
+	"description": null,
+	"groupMembershipClaims": null,
+	"identifierUris": [
+		"https://app-dke-demo.pocproject0.com"
+	],
+	"isDeviceOnlyAuthSupported": null,
+	"isFallbackPublicClient": null,
+	"nativeAuthenticationApisEnabled": null,
+	"notes": null,
+	"publisherDomain": "pocproject0.com",
+	"serviceManagementReference": null,
+	"signInAudience": "AzureADMultipleOrgs",
+	"tags": [],
+	"tokenEncryptionKeyId": null,
+	"samlMetadataUrl": null,
+	"defaultRedirectUri": null,
+	"certification": null,
+	"optionalClaims": null,
+	"servicePrincipalLockConfiguration": null,
+	"requestSignatureVerification": null,
+	"addIns": [],
+	"api": {
+		"acceptMappedClaims": null,
+		"knownClientApplications": [],
+		"requestedAccessTokenVersion": null,
+		"oauth2PermissionScopes": [
+			{
+				"adminConsentDescription": "app-dke-demo",
+				"adminConsentDisplayName": "app-dke-demo",
+				"id": "93645554-84fd-4404-af34-6a679fe96be9",
+				"isEnabled": true,
+				"type": "User",
+				"userConsentDescription": null,
+				"userConsentDisplayName": null,
+				"value": "user_impersonation"
+			}
+		],
+		"preAuthorizedApplications": [
+			{
+				"appId": "0e25d998-b19a-4080-811c-d74d60d65e42",
+				"delegatedPermissionIds": [
+					"93645554-84fd-4404-af34-6a679fe96be9"
+				]
+			},
+			{
+				"appId": "d3590ed6-52b3-4102-aeff-aad2292ab01c",
+				"delegatedPermissionIds": [
+					"93645554-84fd-4404-af34-6a679fe96be9"
+				]
+			},
+			{
+				"appId": "c00e9d32-3c8d-4a7d-832b-029040e7db99",
+				"delegatedPermissionIds": [
+					"93645554-84fd-4404-af34-6a679fe96be9"
+				]
+			},
+			{
+				"appId": "5b20c633-9a48-4a5f-95f6-dae91879051f",
+				"delegatedPermissionIds": [
+					"93645554-84fd-4404-af34-6a679fe96be9"
+				]
+			}
+		]
+	},
+	"appRoles": [],
+	"info": {
+		"logoUrl": null,
+		"marketingUrl": null,
+		"privacyStatementUrl": null,
+		"supportUrl": null,
+		"termsOfServiceUrl": null
+	},
+	"keyCredentials": [],
+	"parentalControlSettings": {
+		"countriesBlockedForMinors": [],
+		"legalAgeGroupRule": "Allow"
+	},
+	"passwordCredentials": [],
+	"publicClient": {
+		"redirectUris": []
+	},
+	"requiredResourceAccess": [
+		{
+			"resourceAppId": "00000003-0000-0000-c000-000000000000",
+			"resourceAccess": [
+				{
+					"id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+					"type": "Scope"
+				}
+			]
+		}
+	],
+	"verifiedPublisher": {
+		"displayName": null,
+		"verifiedPublisherId": null,
+		"addedDateTime": null
+	},
+	"web": {
+		"homePageUrl": null,
+		"logoutUrl": null,
+		"redirectUris": [
+			"https://app-dke-demo.pocproject0.com"
+		],
+		"implicitGrantSettings": {
+			"enableAccessTokenIssuance": false,
+			"enableIdTokenIssuance": true
+		},
+		"redirectUriSettings": [
+			{
+				"uri": "https://app-dke-demo.pocproject0.com",
+				"index": null
+			}
+		]
+	},
+	"spa": {
+		"redirectUris": []
+	}
+}
