@@ -40,9 +40,8 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          # The login process automatically sets the AZURE_CLIENT_ID environment variable.
-          # Get the Service Principal's Application (client) ID from the environment variable
-          CLIENT_ID=$AZURE_CLIENT_ID
+          # Extract the Service Principal's clientId (Application ID) directly from the creds
+          CLIENT_ID=$(echo ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }} | jq -r '.clientId')
           echo "Client ID (Service Principal App ID): $CLIENT_ID"
 
           # Use the Service Principal's Application ID to fetch its Object ID (Principal ID)
