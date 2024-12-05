@@ -65,6 +65,8 @@ jobs:
         # Replace the original file with the updated one
         mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
 
+        echo $(${{ env.DKE_PATH }}/manifest_main.json) | cat
+
     # Update manifest api file
     - name: update manifest api
       run: |
@@ -152,11 +154,13 @@ jobs:
           
           # Extract the objectId from the output
           appObjectId=$(echo "$output" | jq -r '.id')
+
+          # Extract the applicationId from the output
+          appApplicationId=$(echo "$output" | jq -r '.appId')
           
-          # Debugging output
-          echo "output=$output"  # Debugging output
-          echo "appObjectId=$appObjectId"  # Debugging output
+          # Write to variables
           echo "appObjectId=$appObjectId" >> $GITHUB_ENV
+          echo "appApplicationId=$appApplicationId" >> $GITHUB_ENV
   
     # Update app with DKE configuration (configuration related to the DKE)
     - name: update manifest DKE
