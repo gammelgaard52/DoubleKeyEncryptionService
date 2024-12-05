@@ -52,17 +52,17 @@ jobs:
           --arg appName "${{ env.AZURE_WEBAPP_NAME }}" ' \
           --arg newGuid "${{ env.NEW_GUID }}" \
           '
-          # Update the specific keys with appropriate values
-          .identifierUris = ["https://\($fqdm)"] |
-          .api.oauth2PermissionScopes |= map(
-            .adminConsentDescription = $appName |
-            .adminConsentDisplayName = $appName |
-            .id = $newGuid
-          ) |
-          .web.redirectUriSettings |= map(
-            .uri = "https://\($fqdm)"
-          )
-        ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
+            # Update the specific keys with appropriate values
+            .identifierUris = ["https://\($fqdm)"] |
+            .api.oauth2PermissionScopes |= map(
+              .adminConsentDescription = $appName |
+              .adminConsentDisplayName = $appName |
+              .id = $newGuid
+            ) |
+            .web.redirectUriSettings |= map(
+              .uri = "https://\($fqdm)"
+            )
+          ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
 
         # Replace the original file with the updated one
         mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
