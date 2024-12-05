@@ -7,7 +7,7 @@
     "scheduleInfo": {
         "expiration": {
             "type": "AfterDuration",
-            "duration": "PT5M"
+            "duration": "PT5H"
         }
     }
 }
