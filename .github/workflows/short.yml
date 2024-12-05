@@ -150,7 +150,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           # Create the Azure AD app and capture the output
-          output=$(az ad app create --display-name ${{ env.AZURE_WEBAPP_NAME }}-${{ github.run_id }})
+          output=$(az ad app create --display-name ${{ env.AZURE_WEBAPP_NAME }})
           
           # Extract the objectId from the output
           appObjectId=$(echo "$output" | jq -r '.id')
