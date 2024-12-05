@@ -8,8 +8,6 @@ env:
   DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
