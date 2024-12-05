@@ -1,0 +1,30 @@
+{
+	"api": {
+		"preAuthorizedApplications": [
+			{
+				"appId": "0e25d998-b19a-4080-811c-d74d60d65e42",
+				"delegatedPermissionIds": [
+					"58a52bb4-aecf-4a21-99f6-cc906fbe6c2e"
+				]
+			},
+			{
+				"appId": "d3590ed6-52b3-4102-aeff-aad2292ab01c",
+				"delegatedPermissionIds": [
+					"58a52bb4-aecf-4a21-99f6-cc906fbe6c2e"
+				]
+			},
+			{
+				"appId": "c00e9d32-3c8d-4a7d-832b-029040e7db99",
+				"delegatedPermissionIds": [
+					"58a52bb4-aecf-4a21-99f6-cc906fbe6c2e"
+				]
+			},
+			{
+				"appId": "5b20c633-9a48-4a5f-95f6-dae91879051f",
+				"delegatedPermissionIds": [
+					"58a52bb4-aecf-4a21-99f6-cc906fbe6c2e"
+				]
+			}
+		]
+	}
+}

@@ -1,0 +1,51 @@
+{
+	"identifierUris": [
+		"https://app-dke-demo-december.pocproject0.com"
+	],
+	"signInAudience": "AzureADMultipleOrgs",
+	"api": {
+		"acceptMappedClaims": null,
+		"knownClientApplications": [],
+		"requestedAccessTokenVersion": null,
+		"oauth2PermissionScopes": [
+			{
+				"adminConsentDescription": "app-dke-demo-december",
+				"adminConsentDisplayName": "app-dke-demo-december",
+				"id": "58a52bb4-aecf-4a21-99f6-cc906fbe6c2e",
+				"isEnabled": true,
+				"type": "User",
+				"userConsentDescription": null,
+				"userConsentDisplayName": null,
+				"value": "user_impersonation"
+			}
+		]
+	},
+	"keyCredentials": [],
+	"parentalControlSettings": {
+		"countriesBlockedForMinors": [],
+		"legalAgeGroupRule": "Allow"
+	},
+	"requiredResourceAccess": [
+		{
+			"resourceAppId": "00000003-0000-0000-c000-000000000000",
+			"resourceAccess": [
+				{
+					"id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+					"type": "Scope"
+				}
+			]
+		}
+	],
+	"web": {
+		"implicitGrantSettings": {
+			"enableAccessTokenIssuance": false,
+			"enableIdTokenIssuance": true
+		},
+		"redirectUriSettings": [
+			{
+				"uri": "https://app-dke-demo-december.pocproject0.com",
+				"index": null
+			}
+		]
+	}
+}
