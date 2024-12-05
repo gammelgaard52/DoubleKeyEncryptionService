@@ -1,9 +1,11 @@
 name: Create app registration
 
 env:
-  AZURE_WEBAPP_NAME: app-demo-dke-december    # set this to the name of your Azure Web App
+  AZURE_WEBAPP_NAME: app-demo-dke-december-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
   AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
   DOTNET_VERSION: '8.*'                 # set this to the .NET Core version to use
+  DOMAIN_NAME: pocproject0.com        # set domain name of tenant
+  DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
 
 on:
   push:
@@ -25,26 +27,57 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
-  
-    # Show account
-    - name: list account
-      uses: azure/cli@v2
-      with:
-        azcliversion: latest
-        inlineScript: |
-          az account show
 
     # Update account in permission file
     - name: update parameter file
-      uses: azure/cli@v2
-      with:
-        azcliversion: latest
-        inlineScript: |
-          # Update permission.json with the new principalId using jq (in-place)
-          # This must be the groups object ID in the principalId field, since it's the group that has the PIM permission and not the members.
-          jq --arg principalId ${{ vars.SP_GRP_OBJECT_ID }} \
-            '.principalId = $principalId' \
-            iac/application/dke/permission.json > tmp.json && mv tmp.json iac/application/dke/permission.json
+      run: |
+        # Update permission.json with the new principalId using jq (in-place)
+        # This must be the groups object ID in the principalId field, since it's the group that has the PIM permission and not the members.
+        jq --arg principalId ${{ vars.SP_GRP_OBJECT_ID }} \
+          '.principalId = $principalId' \
+          ${{ env.DKE_PATH }}/permission.json > tmp.json && mv tmp.json ${{ env.DKE_PATH }}/permission.json
+
+    # Generate GUID for uniqueness
+    - name: Generate GUID
+      run: |
+        NEW_GUID=$(python3 -c 'import uuid; print(uuid.uuid4())')
+        echo "Generated GUID: $NEW_GUID"
+        echo "NEW_GUID=$NEW_GUID" >> $GITHUB_ENV
+
+    # Update manifest main file
+    - name: update manifest main
+      run: |
+        # Use jq to update specific keys with appropriate values
+        jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
+          --arg appName "${{ env.AZURE_WEBAPP_NAME }}" ' \
+          --arg newGuid "${{ env.NEW_GUID }}"
+          # Update the specific keys with appropriate values
+          .identifierUris = [$fqdm] |
+          .api.oauth2PermissionScopes |= map(
+            .adminConsentDescription = $appName |
+            .adminConsentDisplayName = $appName |
+            .id = $newGuid
+          ) |
+          .web.redirectUriSettings |= map(
+            .uri = $fqdm
+          )
+        ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
+
+        # Replace the original file with the updated one
+        mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
+
+    # Update manifest api file
+    - name: update manifest api
+      run: |
+        # Use jq to update specific keys with appropriate values
+        jq --arg newGuid "${{ env.NEW_GUID }}" '
+        .api.preAuthorizedApplications |= map(
+          .delegatedPermissionIds = [$newGuid]
+        )
+        ' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
+
+        # Replace the original file with the updated one
+        mv ${{ env.DKE_PATH }}/updated_api.json ${{ env.DKE_PATH }}/manifest_api.json
                               
     # PIM for application registration permissions
     - name: pim account
@@ -54,7 +87,7 @@ jobs:
         inlineScript: |      
           # Define variables
           API_URL="https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests"
-          BODY_FILE="iac/application/dke/permission.json"
+          BODY_FILE="${{ env.DKE_PATH }}/permission.json"
           HEADERS="Content-Type=application/json"
 
           # Extract the role definition and principal from the permission.json
@@ -135,7 +168,7 @@ jobs:
         inlineScript: |
           az rest --method PATCH \
           --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
-          --body @iac/application/dke/manifest_main.json \
+          --body @${{ env.DKE_PATH }}/manifest_main.json \
           --headers "Content-Type=application/json"
   
     # Update app with API configuration (client applications that can access the DKE)
@@ -146,5 +179,5 @@ jobs:
         inlineScript: |
           az rest --method PATCH \
           --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
-          --body @iac/application/dke/manifest_api.json \
+          --body @${{ env.DKE_PATH }}/manifest_api.json \
           --headers "Content-Type=application/json"
