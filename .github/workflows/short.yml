@@ -33,7 +33,14 @@ jobs:
         azcliversion: latest
         inlineScript: |
           az account show
-          POST https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests 
+
+    # PIM for application registration permissions
+    - name: pim account
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |      
+          az rest --method POST --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests" --body ${iac/application/dke/permission.json}
   
     # Create app
     - name: create app
