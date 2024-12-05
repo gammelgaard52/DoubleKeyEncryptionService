@@ -41,7 +41,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           # Extract the Service Principal's clientId (Application ID) directly from the creds
-          CLIENT_ID=$(echo ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }} | jq -r '.clientId')
+          CLIENT_ID=$(echo "${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}" | jq -r '.clientId')
           echo "Client ID (Service Principal App ID): $CLIENT_ID"
 
           # Use the Service Principal's Application ID to fetch its Object ID (Principal ID)
