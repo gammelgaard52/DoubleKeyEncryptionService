@@ -34,6 +34,21 @@ jobs:
         inlineScript: |
           az account show
 
+    # Update account in permission file
+    - name: Get Azure Account ID
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          # Get the current logged-in account's principalId
+          CURRENT_PRINCIPAL_ID=$(az ad signed-in-user show --query objectId -o tsv)
+          echo "Current Principal ID: $CURRENT_PRINCIPAL_ID"
+          
+          # Update permission.json with the new principalId using jq (in-place)
+          jq --arg principalId "$CURRENT_PRINCIPAL_ID" \
+            '.principalId = $principalId' \
+            iac/application/dke/permission.json -i
+                          
     # PIM for application registration permissions
     - name: pim account
       uses: azure/cli@v2
