@@ -40,10 +40,15 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          # Get the current logged-in account's principalId
-          CURRENT_PRINCIPAL_ID=$(az ad signed-in-user show --query objectId -o tsv)
+          # The login process automatically sets the AZURE_CLIENT_ID environment variable.
+          # Get the Service Principal's Application (client) ID from the environment variable
+          CLIENT_ID=$AZURE_CLIENT_ID
+          echo "Client ID (Service Principal App ID): $CLIENT_ID"
+
+          # Use the Service Principal's Application ID to fetch its Object ID (Principal ID)
+          CURRENT_PRINCIPAL_ID=$(az ad sp show --id $CLIENT_ID --query objectId -o tsv)
           echo "Current Principal ID: $CURRENT_PRINCIPAL_ID"
-          
+
           # Update permission.json with the new principalId using jq (in-place)
           jq --arg principalId "$CURRENT_PRINCIPAL_ID" \
             '.principalId = $principalId' \
