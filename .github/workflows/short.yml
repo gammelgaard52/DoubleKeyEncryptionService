@@ -49,7 +49,7 @@ jobs:
       run: |
         # Use jq to update specific keys with appropriate values
         jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
-          --arg appName "${{ env.AZURE_WEBAPP_NAME }}" ' \
+          --arg appName "${{ env.AZURE_WEBAPP_NAME }}" \
           --arg newGuid "${{ env.NEW_GUID }}" \
           '
             # Update the specific keys with appropriate values
