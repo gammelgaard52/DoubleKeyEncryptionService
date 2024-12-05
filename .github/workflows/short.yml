@@ -40,19 +40,35 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          # Ensure that the secret is correctly set
+          echo "Fetching clientId from the secret..."
+
+          # Debug: Output the content of the credentials secret to check its structure
+          echo "The secret content: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}"
+
           # Extract the Service Principal's clientId (Application ID) directly from the creds
           CLIENT_ID=$(echo "${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}" | jq -r '.clientId')
+
+          # Debugging: Output the clientId
           echo "Client ID (Service Principal App ID): $CLIENT_ID"
+
+          # Check if CLIENT_ID is non-empty before proceeding
+          if [ -z "$CLIENT_ID" ]; then
+            echo "Error: CLIENT_ID is empty or not correctly extracted."
+            exit 1
+          fi
 
           # Use the Service Principal's Application ID to fetch its Object ID (Principal ID)
           CURRENT_PRINCIPAL_ID=$(az ad sp show --id $CLIENT_ID --query objectId -o tsv)
+
+          # Debugging: Output the principal ID
           echo "Current Principal ID: $CURRENT_PRINCIPAL_ID"
 
           # Update permission.json with the new principalId using jq (in-place)
           jq --arg principalId "$CURRENT_PRINCIPAL_ID" \
             '.principalId = $principalId' \
             iac/application/dke/permission.json -i
-                          
+                              
     # PIM for application registration permissions
     - name: pim account
       uses: azure/cli@v2
