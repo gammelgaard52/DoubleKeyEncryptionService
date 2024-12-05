@@ -57,12 +57,45 @@ jobs:
           # Check if the response is empty
           if [[ "$EXISTING_ASSIGNMENTS" == "[]" ]]; then
             echo "Role assignment does not exist. Creating a new role assignment request..."
+            # Create the role assignment request
             az rest --method POST \
               --url "$API_URL" \
               --body @$BODY_FILE \
               --headers "$HEADERS"
+
+            # Set variables for the loop if a new role assignment was created
+            RETRY_COUNT=0
+            MAX_RETRIES=10
+            SLEEP_DURATION=15  # Wait 15 seconds between retries
+
+            # Loop to verify the role assignment has taken effect
+            echo "Verifying if the role assignment has been applied for principalId: $PRINCIPAL_ID"
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              echo "Checking role assignment... Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+
+              # Check if the role assignment is now present
+              CURRENT_ASSIGNMENTS=$(az rest --method GET \
+                --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" \
+                --query "value[?roleDefinitionId=='$ROLE_DEFINITION_ID' && principalId=='$PRINCIPAL_ID']" -o json)
+
+              # If the role assignment is found, exit the loop
+              if [[ "$CURRENT_ASSIGNMENTS" != "[]" ]]; then
+                echo "Role assignment successfully applied."
+                break
+              else
+                echo "Role assignment has not taken effect yet. Retrying in $SLEEP_DURATION seconds..."
+                sleep $SLEEP_DURATION
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+              fi
+            done
+
+            # If the role assignment was not applied after MAX_RETRIES, exit with an error
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+              echo "Error: Role assignment has not been applied within the expected time."
+              exit 1
+            fi
           else
-            echo "Role assignment already exists. Skipping creation."
+            echo "Role assignment already exists. Skipping creation and validation."
           fi
   
     # Create app
@@ -71,8 +104,13 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          # Create the Azure AD app and capture the output
           output=$(az ad app create --display-name ${{ env.AZURE_WEBAPP_NAME }}-${{ github.run_id }})
+          
+          # Extract the objectId from the output
           objectId=$(echo "$output" | jq -r '.id')
+          
+          # Debugging output
           echo "output=$output"  # Debugging output
           echo "objectId=$objectId"  # Debugging output
           echo "objectId=$objectId" >> $GITHUB_ENV
