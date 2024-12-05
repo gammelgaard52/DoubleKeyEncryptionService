@@ -120,12 +120,12 @@ jobs:
           output=$(az ad app create --display-name ${{ env.AZURE_WEBAPP_NAME }}-${{ github.run_id }})
           
           # Extract the objectId from the output
-          objectId=$(echo "$output" | jq -r '.id')
+          appObjectId=$(echo "$output" | jq -r '.id')
           
           # Debugging output
           echo "output=$output"  # Debugging output
-          echo "objectId=$objectId"  # Debugging output
-          echo "objectId=$objectId" >> $GITHUB_ENV
+          echo "appObjectId=$appObjectId"  # Debugging output
+          echo "appObjectId=$appObjectId" >> $GITHUB_ENV
   
     # Update app with DKE configuration (configuration related to the DKE)
     - name: update manifest DKE
@@ -134,7 +134,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
           --body @iac/application/dke/manifest_main.json \
           --headers "Content-Type=application/json"
   
@@ -145,6 +145,6 @@ jobs:
         azcliversion: latest
         inlineScript: |
           az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.objectId }}" \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
           --body @iac/application/dke/manifest_api.json \
           --headers "Content-Type=application/json"
