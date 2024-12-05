@@ -40,10 +40,30 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |      
-          az rest --method POST \
-          --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests" \
-          --body @iac/application/dke/permission.json \
-          --headers "Content-Type=application/json"
+          # Define variables
+          API_URL="https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests"
+          BODY_FILE="iac/application/dke/permission.json"
+          HEADERS="Content-Type=application/json"
+
+          # Extract the role definition and principal from the permission.json
+          PRINCIPAL_ID=$(jq -r '.principalId' $BODY_FILE)
+          ROLE_DEFINITION_ID=$(jq -r '.roleDefinitionId' $BODY_FILE)
+
+          # Check if the role assignment already exists using az rest GET
+          EXISTING_ASSIGNMENTS=$(az rest --method GET \
+            --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" \
+            --query "value[?roleDefinitionId=='$ROLE_DEFINITION_ID' && principalId=='$PRINCIPAL_ID']" -o json)
+
+          # Check if the response is empty
+          if [[ "$EXISTING_ASSIGNMENTS" == "[]" ]]; then
+            echo "Role assignment does not exist. Creating a new role assignment request..."
+            az rest --method POST \
+              --url "$API_URL" \
+              --body @$BODY_FILE \
+              --headers "$HEADERS"
+          else
+            echo "Role assignment already exists. Skipping creation."
+          fi
   
     # Create app
     - name: create app
