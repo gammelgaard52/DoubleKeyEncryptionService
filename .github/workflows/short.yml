@@ -50,16 +50,17 @@ jobs:
         # Use jq to update specific keys with appropriate values
         jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
           --arg appName "${{ env.AZURE_WEBAPP_NAME }}" ' \
-          --arg newGuid "${{ env.NEW_GUID }}"
+          --arg newGuid "${{ env.NEW_GUID }}" \
+          '
           # Update the specific keys with appropriate values
-          .identifierUris = [$fqdm] |
+          .identifierUris = ["https://\($fqdm)"] |
           .api.oauth2PermissionScopes |= map(
             .adminConsentDescription = $appName |
             .adminConsentDisplayName = $appName |
             .id = $newGuid
           ) |
           .web.redirectUriSettings |= map(
-            .uri = $fqdm
+            .uri = "https://\($fqdm)"
           )
         ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
 
@@ -70,11 +71,10 @@ jobs:
     - name: update manifest api
       run: |
         # Use jq to update specific keys with appropriate values
-        jq --arg newGuid "${{ env.NEW_GUID }}" '
-        .api.preAuthorizedApplications |= map(
-          .delegatedPermissionIds = [$newGuid]
-        )
-        ' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
+        jq --arg newGuid "${{ env.NEW_GUID }}" \
+          '.api.preAuthorizedApplications |= map(
+            .delegatedPermissionIds = [$newGuid]
+          )' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
 
         # Replace the original file with the updated one
         mv ${{ env.DKE_PATH }}/updated_api.json ${{ env.DKE_PATH }}/manifest_api.json
