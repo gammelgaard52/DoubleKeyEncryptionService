@@ -155,50 +155,51 @@ jobs:
                 MAX_RETRIES=10
                 SLEEP_DURATION=15  # 30 seconds delay between retries
                 RETRY_COUNT=0
-                SOURCE_DNS="app-demo-dke-december-12235212445.azurewebsites.net"
-                DESTINATION_DNS="${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}"
+                DESTINATION_DNS="app-demo-dke-december-12235212445.azurewebsites.net"
+                SOURCE_DNS="${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}"
                 DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
                 AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
                 AZURE_DNS_RESOURCE_GROUP="${{ secrets.AZURE_DNS_RESOURCE_GROUP }}"
+                AZURE_APP_NAME="${{ env.AZURE_WEBAPP_NAME }}"
 
                 # Check if the CNAME record already exists
                 CNAME_OUTPUT=$(az network dns record-set cname show \
                     --subscription $AZURE_DNS_SUBSCRIPTION_ID \
                     --resource-group $AZURE_DNS_RESOURCE_GROUP \
                     --zone-name $DOMAIN_NAME \
-                    --name "$SOURCE_DNS" \
+                    --name "$AZURE_APP_NAME" \
                     --query "{name: name, cnameRecord: cnameRecord.cname}" -o json || true)
 
-                CNAME_NAME=$(echo $CNAME_OUTPUT | jq -r '.name // empty')
-                CNAME_VALUE=$(echo $CNAME_OUTPUT | jq -r '.cnameRecord // empty')
+                CNAME_SOURCE=$(echo $CNAME_OUTPUT | jq -r '.name // empty')
+                CNAME_DESTINATION=$(echo $CNAME_OUTPUT | jq -r '.cnameRecord // empty')
 
-                if [ "$CNAME_NAME" = "$SOURCE_DNS" ] && [ "$CNAME_VALUE" = "$DESTINATION_DNS" ]; then
-                    echo "CNAME record already exists with correct source: $CNAME_NAME and destination: $CNAME_VALUE"
+                if [ "$CNAME_SOURCE" = "$AZURE_APP_NAME" ] && [ "$CNAME_DESTINATION" = "$DESTINATION_DNS" ]; then
+                    echo "CNAME record already exists with correct source: $CNAME_SOURCE and destination: $CNAME_DESTINATION"
                 else
                     echo "CNAME record not found or does not match. Creating it now..."
 
                     # Create the CNAME record
-                    az network dns record-set cname add-record \
+                    az network dns record-set cname set-record \
                         --subscription $AZURE_DNS_SUBSCRIPTION_ID \
                         --resource-group $AZURE_DNS_RESOURCE_GROUP \
                         --zone-name $DOMAIN_NAME \
-                        --record-set-name "$SOURCE_DNS" \
+                        --record-set-name "$AZURE_APP_NAME" \
                         --cname "$DESTINATION_DNS"
 
                     # Verify propagation
                     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
                         # Query the DNS CNAME record
-                        CNAME_OUTPUT=$(az network dns record-set cname show \
+                        CNAME_OUTPUT_VERIFY=$(az network dns record-set cname show \
                             --subscription $AZURE_DNS_SUBSCRIPTION_ID \
                             --resource-group $AZURE_DNS_RESOURCE_GROUP \
                             --zone-name $DOMAIN_NAME \
-                            --name $SOURCE_DNS \
+                            --name $AZURE_APP_NAME \
                             --query "{name: name, cnameRecord: cnameRecord.cname}" -o json || true)
 
-                        CNAME_NAME=$(echo $CNAME_OUTPUT | jq -r '.name // empty')
-                        CNAME_VALUE=$(echo $CNAME_OUTPUT | jq -r '.cnameRecord // empty')
+                        CNAME_SOURCE_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.name // empty')
+                        CNAME_DESTINATION_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.cnameRecord // empty')
 
-                        if [ "$CNAME_NAME" = "$SOURCE_DNS" ] && [ "$CNAME_VALUE" = "$DESTINATION_DNS" ]; then
+                        if [ "$CNAME_SOURCE" = "$AZURE_APP_NAME" ] && [ "$CNAME_DESTINATION" = "$DESTINATION_DNS" ]; then
                             echo "CNAME record found with matching source and destination. Propagation successful."
                             break
                         else
