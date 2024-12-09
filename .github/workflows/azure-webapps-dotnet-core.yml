@@ -105,7 +105,8 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          Clear-AzContext -Force
+          az logout
+          az account clear
 
     # Re-login to Azure
     - name: login to Azure
