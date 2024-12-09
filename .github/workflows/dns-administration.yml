@@ -56,7 +56,7 @@ jobs:
                 MAX_RETRIES=10
                 SLEEP_DURATION=15  # 30 seconds delay between retries
                 RETRY_COUNT=0
-                RECORD_NAME="_azurewebsites-challenge.${{ env.AZURE_WEBAPP_NAME }}"
+                RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
                 CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
                 DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
                 AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
@@ -121,7 +121,7 @@ jobs:
             MAX_RETRIES=10
             SLEEP_DURATION=30  # 30 seconds delay between retries
             RETRY_COUNT=0
-            RECORD_NAME="_azurewebsites-challenge.${{ env.AZURE_WEBAPP_NAME }}"
+            RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
             DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
             CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
 
