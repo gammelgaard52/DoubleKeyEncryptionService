@@ -14,21 +14,39 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
 
-      - name: Clear Azure Token Cache Files
+      - name: Clear Azure Token Cache Files with Debugging
         run: |
-          # Define the files to clear
-          CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache")
-      
-          # Loop through the files and clear them if they exist
-          for file in "${CACHE_FILES[@]}"; do
-            if [ -f $file ]; then
-              echo "Clearing file: $file"
-              rm -f $file
-            else
-              echo "File not found: $file"
-            fi
-          done
-              
+            # Define the files to clear
+            CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache")
+        
+            # Loop through the files and clear them if they exist
+            for file in "${CACHE_FILES[@]}"; do
+              # Expand the ~ to the full home directory path
+              file_path=$(eval echo $file)
+        
+              # Get the directory path where the file should be
+              directory=$(dirname "$file_path")
+        
+              # Log the directory we are looking into
+              echo "Looking in directory: $directory"
+        
+              # List all files in the directory for additional debugging
+              if [ -d "$directory" ]; then
+                echo "Files in $directory:"
+                ls -l "$directory"
+              else
+                echo "Directory does not exist: $directory"
+              fi
+        
+              # Check if the file exists and clear it if it does
+              if [ -f "$file_path" ]; then
+                echo "Clearing file: $file_path"
+                rm -f "$file_path"
+              else
+                echo "File not found: $file_path"
+              fi
+            done
+                      
       - name: Logout
         uses: azure/cli@v2
         with:
