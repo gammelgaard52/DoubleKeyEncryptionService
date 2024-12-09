@@ -1,4 +1,4 @@
-name: Build and deploy DKE solution
+name: DNS management
 
 env:
   AZURE_WEBAPP_NAME: app-demo-dke-december-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
