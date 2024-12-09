@@ -15,6 +15,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
 
       - name: Clear Azure Token Cache Files
+        if: false  # Enable or disable the step
         run: |
             # Define the files to clear
             CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache" "~/.azure/msal_http_cache.bin")
@@ -36,7 +37,25 @@ jobs:
                 echo "File not found: $file_path"
                 fi
             done
-                      
+
+      - name: GetToken
+        continue-on-error: true
+        uses: actions/github-script@v3
+        with:
+            script: |
+                const idToken = await core.getIDToken('api://AzureADTokenExchange');
+                idToken == null ? console.log("idToken is null or undefined") : console.log("idToken is fine");
+                let tokenPayload = idToken.split('.')[1];
+                tokenPayload == null ? console.log("tokenPayload is null or undefined") : console.log("tokenPayload is fine");
+                let bufferObj = Buffer.from(tokenPayload, "base64");
+                bufferObj == null ? console.log("bufferObj is null or undefined") : console.log("bufferObj is fine");
+                let decodedPayload = JSON.parse(bufferObj.toString("utf8"));
+                decodedPayload == null ? console.log("decodedPayload is null or undefined") : console.log("decodedPayload is fine")
+                let iss = decodedPayload['iss'];
+                iss == null ? console.log("iss is null or undefined") : console.log("iss is fine")
+                let sub = decodedPayload['sub'];
+                sub == null ? console.log("sub is null or undefined") : console.log("sub is fine")
+
       - name: Logout
         uses: azure/cli@v2
         with:
