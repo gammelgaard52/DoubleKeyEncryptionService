@@ -2,6 +2,9 @@ name: Clear Az token cache
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+        - main
 
 jobs:
   setup-azure:
@@ -14,37 +17,27 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
 
-      - name: Clear Azure Token Cache Files with Debugging
+      - name: Clear Azure Token Cache Files
         run: |
             # Define the files to clear
-            CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache")
-        
+            CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache" "~/.azure/msal_http_cache.bin")
+
             # Loop through the files and clear them if they exist
             for file in "${CACHE_FILES[@]}"; do
-              # Expand the ~ to the full home directory path
-              file_path=$(eval echo $file)
-        
-              # Get the directory path where the file should be
-              directory=$(dirname "$file_path")
-        
-              # Log the directory we are looking into
-              echo "Looking in directory: $directory"
-        
-              # List all files in the directory for additional debugging
-              if [ -d "$directory" ]; then
-                echo "Files in $directory:"
-                ls -l "$directory"
-              else
-                echo "Directory does not exist: $directory"
-              fi
-        
-              # Check if the file exists and clear it if it does
-              if [ -f "$file_path" ]; then
+                # Expand the ~ to the full home directory path
+                file_path=$(eval echo $file)
+
+                # Log the directory we are looking into
+                directory=$(dirname "$file_path")
+                echo "Looking in directory: $directory"
+
+                # Check if the file exists and clear it if it does
+                if [ -f "$file_path" ]; then
                 echo "Clearing file: $file_path"
                 rm -f "$file_path"
-              else
+                else
                 echo "File not found: $file_path"
-              fi
+                fi
             done
                       
       - name: Logout
