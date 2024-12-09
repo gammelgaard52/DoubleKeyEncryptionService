@@ -203,6 +203,13 @@ jobs:
           --body @${{ env.DKE_PATH }}/manifest_api.json \
           --headers "Content-Type=application/json"
 
+    - name: logout of azure
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az logout
+
   build:
     runs-on: ubuntu-latest
     needs: app-registration
