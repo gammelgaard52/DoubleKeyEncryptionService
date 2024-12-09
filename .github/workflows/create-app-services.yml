@@ -1,0 +1,62 @@
+name: Create app services
+
+env:
+  AZURE_WEBAPP_NAME: app-demo-dke-december-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  AZURE_WEBAPP_SKU: F1                # Set the SKU used by the app https://azure.microsoft.com/en-us/pricing/details/app-service/windows/#pricing
+  AZURE_REGION: westeurope                                           # Set to your desired Azure region
+  DOTNET_VERSION: '8.*'                 # set this to the .NET Core version to use
+  DOMAIN_NAME: pocproject0.com        # set domain name of tenant
+  DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup-azure:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+      - name: Create Resource Group
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az group create --name rg-${{ env.AZURE_WEBAPP_NAME }} --location ${{ env.AZURE_REGION }}
+
+      - name: Create App Service Plan
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az appservice plan create \
+            --name plan-${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+            --sku ${{ env.AZURE_WEBAPP_SKU }}
+
+      - name: Create Azure Web App
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az webapp create \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+            --plan plan-${{ env.AZURE_WEBAPP_NAME }} \
+            --runtime "dotnet:8"
+      
+      - name: Logout
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az logout
