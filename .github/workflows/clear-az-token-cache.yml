@@ -2,9 +2,6 @@ name: Clear Az token cache
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-        - main
 
 jobs:
   setup-azure:
