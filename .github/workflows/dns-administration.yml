@@ -1,0 +1,118 @@
+name: Build and deploy DKE solution
+
+env:
+  AZURE_WEBAPP_NAME: app-demo-dke-december-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  AZURE_WEBAPP_SKU: B1                # Set the SKU used by the app https://azure.microsoft.com/en-us/pricing/details/app-service/windows/#pricing
+  AZURE_REGION: westeurope            # Set to your desired Azure region
+  DOTNET_VERSION: '8.*'               # set this to the .net version to use
+  DOMAIN_NAME: pocproject0.com        # set domain name of tenant
+  DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+        # Login to Azure
+        - name: login to azure
+          uses: azure/login@v2
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+        - name: Add Custom Domain to Web App
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Add the custom domain to the Azure Web App
+                az webapp config hostname add \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
+                    
+        - name: Verify Domain Ownership
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Fetch the TXT record required for domain verification
+                TXT_NAME=$(az webapp config hostname get-external-verification-token \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
+                --query "token" -o tsv)
+
+                # Add the TXT record to Azure DNS for domain verification
+                az network dns record-set txt add-record \
+                --subscription ${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }} \
+                --resource-group ${{ secrets.AZURE_DNS_RESOURCE_GROUP }} \
+                --zone-name ${{ env.DOMAIN_NAME }} \
+                --record-set-name asuid.${{ env.AZURE_WEBAPP_NAME }} \
+                --value $TXT_NAME
+
+
+        - name: Verify DNS propagation for custom domain
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+                AZURE_WEBAPP_NAME="${{ env.AZURE_WEBAPP_NAME }}"
+                MAX_RETRIES=10
+                SLEEP_DURATION=30  # 30 seconds delay between retries
+                RETRY_COUNT=0
+                
+                # Wait for the DNS TXT record to propagate
+                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                # Query DNS to check if the TXT record exists
+                DNS_RECORD=$(az network dns record-set txt show \
+                --subscription ${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }} \
+                --resource-group ${{ secrets.AZURE_DNS_RESOURCE_GROUP }} \
+                --zone-name $DOMAIN_NAME \
+                --name "_azurewebsites-challenge.${{ env.AZURE_WEBAPP_NAME }}" \
+                --query "value[0]" -o tsv)
+                
+                if [ "$DNS_RECORD" != "" ]; then
+                    echo "DNS TXT record found, propagation successful."
+                    break
+                else
+                    echo "DNS record not found yet. Retrying in $SLEEP_DURATION seconds..."
+                    sleep $SLEEP_DURATION
+                    RETRY_COUNT=$((RETRY_COUNT + 1))
+                fi
+                done
+
+                if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "Error: DNS record has not propagated within the expected time."
+                exit 1
+                fi
+
+        - name: Enable HTTPS for Custom Domain
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Enable HTTPS with a managed certificate
+                az webapp config ssl bind \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --certificate-thumbprint $(az webapp config ssl create \
+                    --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                    --name ${{ env.AZURE_WEBAPP_NAME }} \
+                    --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
+                    --query "thumbprint" -o tsv)
+                
+
+        - name: logout of azure
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                az logout
