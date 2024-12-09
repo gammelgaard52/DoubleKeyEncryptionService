@@ -18,6 +18,9 @@ permissions:
 jobs:
   app-registration:
     runs-on: ubuntu-latest
+    outputs:
+      applicationId: ${{ env.appApplicationId }}
+      newGuid: ${{ needs.app-registration.outputs.newGuid }}
 
     steps:   
     - uses: actions/checkout@v3
@@ -119,6 +122,7 @@ jobs:
     # Create app
     - name: create app
       uses: azure/cli@v2
+      id: create-app
       with:
         azcliversion: latest
         inlineScript: |
@@ -148,7 +152,7 @@ jobs:
         # Use jq to update specific keys with appropriate values
         jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
           --arg appName "${{ env.AZURE_WEBAPP_NAME }}" \
-          --arg newGuid "${{ env.NEW_GUID }}" \
+          --arg newGuid "${{ needs.app-registration.outputs.newGuid }}" \
           '
             # Update the specific keys with appropriate values
             .identifierUris = ["https://\($fqdm)"] |
@@ -169,7 +173,7 @@ jobs:
     - name: update manifest api
       run: |
         # Use jq to update specific keys with appropriate values
-        jq --arg newGuid "${{ env.NEW_GUID }}" \
+        jq --arg newGuid "${{ needs.app-registration.outputs.newGuid }}" \
           '.api.preAuthorizedApplications |= map(
             .delegatedPermissionIds = [$newGuid]
           )' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
@@ -201,6 +205,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: app-registration
 
     steps:
       - uses: actions/checkout@v3
@@ -227,20 +232,20 @@ jobs:
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:${{ env.NEW_GUID }} -subj "${{vars.KEY_ATTRIBUTES}}"
-          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -traditional -passin pass:${{ env.NEW_GUID }}
-          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:${{ env.NEW_GUID }}
+          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:${{ needs.app-registration.outputs.newGuid }} -subj "${{vars.KEY_ATTRIBUTES}}"
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -traditional -passin pass:${{ needs.app-registration.outputs.newGuid }}
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:${{ needs.app-registration.outputs.newGuid }}
 
       # Set variables
       - name: Set environment variables
         run: |
           echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
-          echo "newClientId=${{ env.appApplicationId }}" >> $GITHUB_ENV
+          echo "newClientId=${{ needs.app-registration.outputs.applicationId }}" >> $GITHUB_ENV
           echo "newTenantId=${{vars.TENANT_ID }}" >> $GITHUB_ENV
           echo "newValidIssuer=${{vars.VALID_ISSUER}}" >> $GITHUB_ENV
           echo "newJwtAudience=https://${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" >> $GITHUB_ENV
           echo "newValueKeyName=${{vars.KEY_NAME}}" >> $GITHUB_ENV
-          echo "newValueKeyId=${{ env.NEW_GUID }}" >> $GITHUB_ENV
+          echo "newValueKeyId=${{ needs.app-registration.outputs.newGuid }}" >> $GITHUB_ENV
           echo "newValueEmail=${{vars.EMAILS}}" >> $GITHUB_ENV
           echo "newPublicPem=$GITHUB_WORKSPACE/pubkeyonly.pem" >> $GITHUB_ENV
           echo "newPrivatePem=$GITHUB_WORKSPACE/privkeynopass.pem" >> $GITHUB_ENV
