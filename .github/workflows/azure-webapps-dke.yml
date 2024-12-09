@@ -110,8 +110,30 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          # Native Az cleanup methods
           az account clear
           az logout
+          
+          # Bruteforce cleanup of Az token
+            CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache" "~/.azure/msal_http_cache.bin")
+
+            # Loop through the files and clear them if they exist
+            for file in "${CACHE_FILES[@]}"; do
+                # Expand the ~ to the full home directory path
+                file_path=$(eval echo $file)
+
+                # Log the directory we are looking into
+                directory=$(dirname "$file_path")
+                echo "Looking in directory: $directory"
+
+                # Check if the file exists and clear it if it does
+                if [ -f "$file_path" ]; then
+                echo "Clearing file: $file_path"
+                rm -f "$file_path"
+                else
+                echo "File not found: $file_path"
+                fi
+            done
 
     # Re-login to Azure
     - name: login to Azure
