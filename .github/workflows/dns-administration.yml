@@ -32,11 +32,13 @@ jobs:
             azcliversion: latest
             inlineScript: |
                 # Fetch the TXT record required for domain verification
-                TXT_NAME=$(az webapp config hostname get-external-verification-token \
+                TXT_NAME=$(az webapp config hostname add \
                 --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
                 --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
                 --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
                 --query "token" -o tsv)
+
+                echo "TXT content: $TXT_NAME"
 
                 # Add the TXT record to Azure DNS for domain verification
                 az network dns record-set txt add-record \
@@ -81,17 +83,6 @@ jobs:
                 echo "Error: DNS record has not propagated within the expected time."
                 exit 1
                 fi
-
-        - name: Add Custom Domain to Web App
-          uses: azure/cli@v2
-          with:
-            azcliversion: latest
-            inlineScript: |
-                # Add the custom domain to the Azure Web App
-                az webapp config hostname add \
-                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
-                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
-                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
 
         - name: Enable HTTPS for Custom Domain
           uses: azure/cli@v2
