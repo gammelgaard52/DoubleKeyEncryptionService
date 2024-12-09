@@ -112,7 +112,6 @@ jobs:
         inlineScript: |
           # Native Az cleanup methods
           az account clear
-          az logout
           
           # Bruteforce cleanup of Az token
             CACHE_FILES=("~/.azure/msal_token_cache.bin" "~/.azure/msal_token_cache.json" "~/.IdentityService/msal.cache" "~/.azure/msal_http_cache.bin")
