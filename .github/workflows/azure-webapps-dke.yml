@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       applicationId: ${{ env.appApplicationId }}
-      newGuid: ${{ needs.app-registration.outputs.newGuid }}
+      newGuid: ${{ env.NEW_GUID }}
 
     steps:   
     - uses: actions/checkout@v3
