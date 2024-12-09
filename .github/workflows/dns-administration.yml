@@ -116,11 +116,19 @@ jobs:
                 fi
 
         # Verify with nslookup or dig to ensure external resolution
-        - name: Verify external DNS
+        - name: Verify DNS TXT Record Externally
           run: |
+            MAX_RETRIES=10
+            SLEEP_DURATION=30  # 30 seconds delay between retries
+            RETRY_COUNT=0
+            RECORD_NAME="_azurewebsites-challenge.${{ env.AZURE_WEBAPP_NAME }}"
+            DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+            CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
+
             echo "Verifying TXT record externally..."
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                EXTERNAL_RECORD=$(nslookup -type=txt $RECORD_NAME.$ZONE_NAME | grep "$RECORD_VALUE")
+                # Use nslookup to check for the DNS TXT record propagation
+                EXTERNAL_RECORD=$(nslookup -type=txt $RECORD_NAME.$DOMAIN_NAME | grep "$CUSTOM_DOMAIN_VERIFICATION_ID")
 
                 if [ "$EXTERNAL_RECORD" != "" ]; then
                     echo "External DNS verification successful. Record value: $EXTERNAL_RECORD"
@@ -137,7 +145,7 @@ jobs:
                 exit 1
             fi
 
-            echo "DNS record successfully added and verified in Azure DNS and externally."
+            echo "DNS record successfully verified externally."
         
         # Add Custom Domain to Web App
         - name: Add Custom Domain to Web App
