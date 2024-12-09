@@ -334,7 +334,7 @@ jobs:
           inlineScript: |
             az logout
 
-  deploy:
+  deploy-app:
     runs-on: ubuntu-latest
     needs: [setup-azure, build]
     environment:
@@ -369,3 +369,170 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az logout
+
+  configure-dns:
+    runs-on: ubuntu-latest
+    needs: deploy-app
+
+    steps:
+        # Login to Azure
+        - name: login to azure
+          uses: azure/login@v2
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+                   
+        # Install Azure Resource Graph extension
+        - name: Install az graph extension
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                az extension add --name resource-graph --upgrade -y
+
+        # Retrieve the custom domain verification ID from Azure Resource Graph
+        - name: Get custom domain verification ID
+          id: get_verification_id
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                CUSTOM_DOMAIN_VERIFICATION_ID=$(az graph query -q "Resources | where type == 'microsoft.web/sites' and name == '${{ env.AZURE_WEBAPP_NAME }}' | project name, properties.customDomainVerificationId, type" --query "data[0].properties_customDomainVerificationId" -o tsv)
+                
+                # Store the result in a secret for future use (never expose to logs)
+                echo "::add-mask::$CUSTOM_DOMAIN_VERIFICATION_ID"  # Mask the value in the logs for security
+                echo "CUSTOM_DOMAIN_VERIFICATION_ID=$CUSTOM_DOMAIN_VERIFICATION_ID" >> $GITHUB_ENV
+
+        # Add TXT Record to Azure DNS for domain verification
+        - name: Verify DNS propagation for custom domain
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                MAX_RETRIES=10
+                SLEEP_DURATION=15  # 30 seconds delay between retries
+                RETRY_COUNT=0
+                RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
+                CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
+                DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+                AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
+                AZURE_DNS_RESOURCE_GROUP="${{ secrets.AZURE_DNS_RESOURCE_GROUP }}"
+                
+                # Check if the TXT record already exists
+                DNS_OUTPUT=$(az network dns record-set txt show \
+                    --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                    --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                    --zone-name $DOMAIN_NAME \
+                    --name "$RECORD_NAME" \
+                    --query "{name: name, value: TXTRecords[0].value[0]}" -o json || true)  # Suppress errors if record doesn't exist
+
+                DNS_NAME=$(echo $DNS_OUTPUT | jq -r '.name // empty')
+                DNS_VALUE=$(echo $DNS_OUTPUT | jq -r '.value // empty')
+                
+                if [ "$DNS_NAME" = "$RECORD_NAME" ] && [ "$DNS_VALUE" = "$CUSTOM_DOMAIN_VERIFICATION_ID" ]; then
+                    echo "DNS TXT record already exists with correct name: $DNS_NAME and value: $DNS_VALUE"
+                else
+                    echo "DNS TXT record not found or does not match. Creating it now..."
+
+                # Create the TXT record
+                az network dns record-set txt add-record \
+                    --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                    --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                    --zone-name $DOMAIN_NAME \
+                    --record-set-name "$RECORD_NAME" \
+                    --value "$CUSTOM_DOMAIN_VERIFICATION_ID"
+
+                # Verify propagation
+                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                    # Query the DNS TXT record
+                    DNS_OUTPUT=$(az network dns record-set txt show \
+                        --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                        --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                        --zone-name $DOMAIN_NAME \
+                        --name $RECORD_NAME \
+                        --query "{name: name, value: TXTRecords[0].value[0]}" -o json || true)
+
+                    DNS_NAME=$(echo $DNS_OUTPUT | jq -r '.name // empty')
+                    DNS_VALUE=$(echo $DNS_OUTPUT | jq -r '.value // empty')
+
+                    if [ "$DNS_NAME" = "$RECORD_NAME" ] && [ "$DNS_VALUE" = "$CUSTOM_DOMAIN_VERIFICATION_ID" ]; then
+                        echo "DNS TXT record found with matching name and value. Propagation successful."
+                        break
+                    else
+                        echo "DNS record not found or does not match yet. Retrying in $SLEEP_DURATION seconds..."
+                        sleep $SLEEP_DURATION
+                        RETRY_COUNT=$((RETRY_COUNT + 1))
+                    fi
+                done
+
+                    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                        echo "Error: DNS record has not propagated within the expected time or does not match."
+                        exit 1
+                    fi
+                fi
+
+        # Verify with nslookup or dig to ensure external resolution
+        - name: Verify DNS TXT Record Externally
+          run: |
+            MAX_RETRIES=10
+            SLEEP_DURATION=30  # 30 seconds delay between retries
+            RETRY_COUNT=0
+            RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
+            DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+            CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
+
+            echo "Verifying TXT record externally..."
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                # Use nslookup to check for the DNS TXT record propagation
+                EXTERNAL_RECORD=$(nslookup -type=txt $RECORD_NAME.$DOMAIN_NAME | grep "$CUSTOM_DOMAIN_VERIFICATION_ID")
+
+                if [ "$EXTERNAL_RECORD" != "" ]; then
+                    echo "External DNS verification successful. Record value: $EXTERNAL_RECORD"
+                    break
+                else
+                    echo "External DNS record not found yet. Retrying in $SLEEP_DURATION seconds..."
+                    sleep $SLEEP_DURATION
+                    RETRY_COUNT=$((RETRY_COUNT + 1))
+                fi
+            done
+
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                echo "Error: External DNS record has not propagated within the expected time."
+                exit 1
+            fi
+
+            echo "DNS record successfully verified externally."
+        
+        # Add Custom Domain to Web App
+        - name: Add Custom Domain to Web App
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Add the custom domain to the Azure Web App
+                az webapp config hostname add \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
+
+        # Enable HTTPS for Custom Domain
+        - name: Enable HTTPS for Custom Domain
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Enable HTTPS with a managed certificate
+                az webapp config ssl bind \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --certificate-thumbprint $(az webapp config ssl create \
+                    --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                    --name ${{ env.AZURE_WEBAPP_NAME }} \
+                    --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
+                    --query "thumbprint" -o tsv)
+
+        - name: logout of azure
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                az logout
