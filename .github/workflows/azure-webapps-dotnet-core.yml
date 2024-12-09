@@ -327,6 +327,7 @@ jobs:
     needs: [setup-azure, build]
     environment:
       name: 'Development'
+    outputs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write
