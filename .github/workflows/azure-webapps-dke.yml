@@ -110,8 +110,8 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az logout
           az account clear
+          az logout
 
     # Re-login to Azure
     - name: login to Azure
