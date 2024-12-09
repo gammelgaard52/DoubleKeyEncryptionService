@@ -168,7 +168,7 @@ jobs:
                     --resource-group $AZURE_DNS_RESOURCE_GROUP \
                     --zone-name $DOMAIN_NAME \
                     --name "$AZURE_APP_NAME" \
-                    --query "{name: name, cnameRecord: cnameRecord.cname}" -o json || true)
+                    --query "{name: name, cnameRecord: CNAMERecord.cname}" -o json || true)
 
                 CNAME_SOURCE=$(echo $CNAME_OUTPUT | jq -r '.name // empty')
                 CNAME_DESTINATION=$(echo $CNAME_OUTPUT | jq -r '.cnameRecord // empty')
@@ -194,7 +194,7 @@ jobs:
                             --resource-group $AZURE_DNS_RESOURCE_GROUP \
                             --zone-name $DOMAIN_NAME \
                             --name $AZURE_APP_NAME \
-                            --query "{name: name, cnameRecord: cnameRecord.cname}" -o json || true)
+                            --query "{name: name, cnameRecord: CNAMERecord.cname}" -o json || true)
 
                         CNAME_SOURCE_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.name // empty')
                         CNAME_DESTINATION_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.cnameRecord // empty')
