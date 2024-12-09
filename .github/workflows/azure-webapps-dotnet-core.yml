@@ -302,8 +302,7 @@ jobs:
             az appservice plan create \
             --name plan-${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
-            --sku ${{ env.AZURE_WEBAPP_SKU }} \
-            --is-windows
+            --sku ${{ env.AZURE_WEBAPP_SKU }}
 
       - name: Create Azure Web App
         uses: azure/cli@v2
