@@ -54,53 +54,63 @@ jobs:
             azcliversion: latest
             inlineScript: |
                 MAX_RETRIES=10
-                SLEEP_DURATION=30  # 30 seconds delay between retries
+                SLEEP_DURATION=15  # 30 seconds delay between retries
                 RETRY_COUNT=0
                 RECORD_NAME="_azurewebsites-challenge.${{ env.AZURE_WEBAPP_NAME }}"
+                CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
+                DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+                AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
+                AZURE_DNS_RESOURCE_GROUP="${{ secrets.AZURE_DNS_RESOURCE_GROUP }}"
                 
                 # Check if the TXT record already exists
-                DNS_RECORD=$(az network dns record-set txt show \
-                    --subscription ${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }} \
-                    --resource-group ${{ secrets.AZURE_DNS_RESOURCE_GROUP }} \
-                    --zone-name ${{ env.DOMAIN_NAME }} \
+                DNS_OUTPUT=$(az network dns record-set txt show \
+                    --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                    --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                    --zone-name $DOMAIN_NAME \
                     --name "$RECORD_NAME" \
-                    --query "value[0]" -o tsv || true)  # Suppress errors if record doesn't exist
+                    --query "{name: name, value: TXTRecords[0].value[0]}" -o json || true)  # Suppress errors if record doesn't exist
 
-                if [ "$DNS_RECORD" != "" ]; then
-                    echo "DNS TXT record already exists: $DNS_RECORD"
+                DNS_NAME=$(echo $DNS_OUTPUT | jq -r '.name // empty')
+                DNS_VALUE=$(echo $DNS_OUTPUT | jq -r '.value // empty')
+                
+                if [ "$DNS_NAME" = "$RECORD_NAME" ] && [ "$DNS_VALUE" = "$CUSTOM_DOMAIN_VERIFICATION_ID" ]; then
+                    echo "DNS TXT record already exists with correct name: $DNS_NAME and value: $DNS_VALUE"
                 else
-                    echo "DNS TXT record not found. Creating it now..."
+                    echo "DNS TXT record not found or does not match. Creating it now..."
 
-                    # Create the TXT record
-                    az network dns record-set txt add-record \
-                        --subscription ${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }} \
-                        --resource-group ${{ secrets.AZURE_DNS_RESOURCE_GROUP }} \
-                        --zone-name ${{ env.DOMAIN_NAME }} \
-                        --record-set-name "$RECORD_NAME" \
-                        --value ${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}
+                # Create the TXT record
+                az network dns record-set txt add-record \
+                    --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                    --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                    --zone-name $DOMAIN_NAME \
+                    --record-set-name "$RECORD_NAME" \
+                    --value "$CUSTOM_DOMAIN_VERIFICATION_ID"
 
-                    # Verify propagation
-                    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                        # Query DNS to check if the TXT record exists
-                        DNS_RECORD=$(az network dns record-set txt show \
-                            --subscription ${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }} \
-                            --resource-group ${{ secrets.AZURE_DNS_RESOURCE_GROUP }} \
-                            --zone-name ${{ env.DOMAIN_NAME }} \
-                            --name $RECORD_NAME \
-                            --query "value[0]" -o tsv || true)
+                # Verify propagation
+                while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                    # Query the DNS TXT record
+                    DNS_OUTPUT=$(az network dns record-set txt show \
+                        --subscription $AZURE_DNS_SUBSCRIPTION_ID \
+                        --resource-group $AZURE_DNS_RESOURCE_GROUP \
+                        --zone-name $DOMAIN_NAME \
+                        --name $RECORD_NAME \
+                        --query "{name: name, value: TXTRecords[0].value[0]}" -o json || true)
 
-                        if [ "$DNS_RECORD" != "" ]; then
-                            echo "DNS TXT record found, propagation successful: $DNS_RECORD"
-                            break
-                        else
-                            echo "DNS record not found yet. Retrying in $SLEEP_DURATION seconds..."
-                            sleep $SLEEP_DURATION
-                            RETRY_COUNT=$((RETRY_COUNT + 1))
-                        fi
-                    done
+                    DNS_NAME=$(echo $DNS_OUTPUT | jq -r '.name // empty')
+                    DNS_VALUE=$(echo $DNS_OUTPUT | jq -r '.value // empty')
+
+                    if [ "$DNS_NAME" = "$RECORD_NAME" ] && [ "$DNS_VALUE" = "$CUSTOM_DOMAIN_VERIFICATION_ID" ]; then
+                        echo "DNS TXT record found with matching name and value. Propagation successful."
+                        break
+                    else
+                        echo "DNS record not found or does not match yet. Retrying in $SLEEP_DURATION seconds..."
+                        sleep $SLEEP_DURATION
+                        RETRY_COUNT=$((RETRY_COUNT + 1))
+                    fi
+                done
 
                     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-                        echo "Error: DNS record has not propagated within the expected time."
+                        echo "Error: DNS record has not propagated within the expected time or does not match."
                         exit 1
                     fi
                 fi
