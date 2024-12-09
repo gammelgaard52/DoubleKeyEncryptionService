@@ -25,17 +25,6 @@ jobs:
           uses: azure/login@v2
           with:
             creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
-
-        - name: Add Custom Domain to Web App
-          uses: azure/cli@v2
-          with:
-            azcliversion: latest
-            inlineScript: |
-                # Add the custom domain to the Azure Web App
-                az webapp config hostname add \
-                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
-                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
-                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
                     
         - name: Verify Domain Ownership
           uses: azure/cli@v2
@@ -56,7 +45,6 @@ jobs:
                 --zone-name ${{ env.DOMAIN_NAME }} \
                 --record-set-name asuid.${{ env.AZURE_WEBAPP_NAME }} \
                 --value $TXT_NAME
-
 
         - name: Verify DNS propagation for custom domain
           uses: azure/cli@v2
@@ -94,6 +82,17 @@ jobs:
                 exit 1
                 fi
 
+        - name: Add Custom Domain to Web App
+          uses: azure/cli@v2
+          with:
+            azcliversion: latest
+            inlineScript: |
+                # Add the custom domain to the Azure Web App
+                az webapp config hostname add \
+                --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
+                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
+
         - name: Enable HTTPS for Custom Domain
           uses: azure/cli@v2
           with:
@@ -108,7 +107,6 @@ jobs:
                     --name ${{ env.AZURE_WEBAPP_NAME }} \
                     --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
                     --query "thumbprint" -o tsv)
-                
 
         - name: logout of azure
           uses: azure/cli@v2
