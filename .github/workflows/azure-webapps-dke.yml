@@ -576,7 +576,7 @@ jobs:
                         CNAME_SOURCE_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.name // empty')
                         CNAME_DESTINATION_VERIFY=$(echo $CNAME_OUTPUT_VERIFY | jq -r '.cnameRecord // empty')
 
-                        if [ "$CNAME_SOURCE" = "$AZURE_APP_NAME" ] && [ "$CNAME_DESTINATION" = "$DESTINATION_DNS" ]; then
+                        if [ "$CNAME_SOURCE_VERIFY" = "$AZURE_APP_NAME" ] && [ "$CNAME_DESTINATION_VERIFY" = "$DESTINATION_DNS" ]; then
                             echo "CNAME record found with matching source and destination. Propagation successful."
                             break
                         else
