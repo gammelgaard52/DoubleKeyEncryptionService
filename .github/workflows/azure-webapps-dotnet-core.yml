@@ -313,7 +313,7 @@ jobs:
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
             --plan plan-${{ env.AZURE_WEBAPP_NAME }} \
-            --runtime "dotnet:${{ env.DOTNET_VERSION }}"
+            --runtime "dotnet:8"
       
       - name: Logout
         uses: azure/cli@v2
