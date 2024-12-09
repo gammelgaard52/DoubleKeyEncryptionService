@@ -147,12 +147,12 @@ jobs:
         echo "NEW_GUID=$NEW_GUID" >> $GITHUB_ENV
 
     # Update manifest main file
-    - name: update manifest main
+    - name: update manifest main file
       run: |
         # Use jq to update specific keys with appropriate values
         jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
           --arg appName "${{ env.AZURE_WEBAPP_NAME }}" \
-          --arg newGuid "${{ needs.app-registration.outputs.newGuid }}" \
+          --arg newGuid "${{ env.NEW_GUID }}" \
           '
             # Update the specific keys with appropriate values
             .identifierUris = ["https://\($fqdm)"] |
@@ -170,10 +170,10 @@ jobs:
         mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
 
     # Update manifest api file
-    - name: update manifest api
+    - name: update manifest api file
       run: |
         # Use jq to update specific keys with appropriate values
-        jq --arg newGuid "${{ needs.app-registration.outputs.newGuid }}" \
+        jq --arg newGuid "${{ env.NEW_GUID }}" \
           '.api.preAuthorizedApplications |= map(
             .delegatedPermissionIds = [$newGuid]
           )' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
@@ -182,7 +182,7 @@ jobs:
         mv ${{ env.DKE_PATH }}/updated_api.json ${{ env.DKE_PATH }}/manifest_api.json
   
     # Update app with DKE configuration (configuration related to the DKE)
-    - name: update manifest DKE
+    - name: update app with manifest DKE
       uses: azure/cli@v2
       with:
         azcliversion: latest
@@ -193,7 +193,7 @@ jobs:
           --headers "Content-Type=application/json"
   
     # Update app with API configuration (client applications that can access the DKE)
-    - name: update manifest API
+    - name: update  app with manifest API
       uses: azure/cli@v2
       with:
         azcliversion: latest
