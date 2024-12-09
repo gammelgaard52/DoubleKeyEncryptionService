@@ -236,7 +236,7 @@ jobs:
                 # Enable HTTPS with a managed certificate
                 az webapp config ssl bind \
                 --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
-                --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
+                --name ${{ env.AZURE_WEBAPP_NAME }} \
                 --ssl-type SNI \
                 --certificate-thumbprint $(az webapp config ssl create \
                     --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
