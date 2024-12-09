@@ -303,7 +303,7 @@ jobs:
             --name plan-${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
             --sku ${{ env.AZURE_WEBAPP_SKU }} \
-            --is-linux
+            --is-windows
 
       - name: Create Azure Web App
         uses: azure/cli@v2
