@@ -76,7 +76,9 @@ jobs:
         jq --arg fqdm "${{ github.event.inputs.cname }}" \
           --arg appName "${{ github.event.inputs.app_name }}" \
           --arg newGuid "${{ env.NEW_GUID }}" \
-          '.identifierUris = ["https://\($fqdm)"] |
+          '
+            # Update the specific keys with appropriate values
+            .identifierUris = ["https://\($fqdm)"] |
             .api.oauth2PermissionScopes |= map(
               .adminConsentDescription = $appName |
               .adminConsentDisplayName = $appName |
@@ -84,7 +86,8 @@ jobs:
             ) |
             .web.redirectUriSettings |= map(
               .uri = "https://\($fqdm)"
-            )' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
+            )
+          ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
 
         # Replace the original file with the updated one
         mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
