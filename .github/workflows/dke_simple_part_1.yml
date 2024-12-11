@@ -118,14 +118,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      # List files in folder
-      - name: List files in folder
-        run: ls $GITHUB_WORKSPACE/src/customer-key-store
-
       # Create encryption keys
       - name: Generate SSL Keys
         run: |
-          KEY_ATTRIBUTES=/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=${{ github.event.inputs.app_name }}"
+          KEY_ATTRIBUTES=/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=${{ github.event.inputs.app_name }}
           openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:${{ needs.app-registration.outputs.newGuid }} -subj "$KEY_ATTRIBUTES"
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -traditional -passin pass:${{ needs.app-registration.outputs.newGuid }}
           openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:${{ needs.app-registration.outputs.newGuid }}
