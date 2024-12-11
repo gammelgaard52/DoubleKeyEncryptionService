@@ -10,6 +10,9 @@ env:
 on:
   workflow_dispatch:
     inputs:
+      application_client_id:
+        description: "Enter the Application ID of the the Application Registration created for DKE"
+        required: true
       rg_name:
         description: "Enter the name of the Resource Group create for the DKE application"
         required: true
@@ -132,7 +135,7 @@ jobs:
         run: |
           TENANT_ID=$(az account show --query tenantId -o tsv)
           echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
-          echo "newClientId=${{ needs.app-registration.outputs.applicationId }}" >> $GITHUB_ENV
+          echo "newClientId=${{ github.event.inputs.application_client_id }}" >> $GITHUB_ENV
           echo "newTenantId=$TENANT_ID" >> $GITHUB_ENV
           echo "newValidIssuer=https://sts.windows.net/$TENANT_ID/" >> $GITHUB_ENV
           echo "newJwtAudience=https://${{ github.event.inputs.cname }}" >> $GITHUB_ENV
