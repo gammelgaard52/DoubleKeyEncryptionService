@@ -30,7 +30,6 @@ jobs:
   app-registration:
     runs-on: ubuntu-latest
     outputs:
-      applicationId: ${{ env.appApplicationId }}
       newGuid: ${{ env.NEW_GUID }}
 
     steps:   
@@ -41,26 +40,6 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
-
-    # Create app
-    - name: create app
-      uses: azure/cli@v2
-      id: create-app
-      with:
-        azcliversion: latest
-        inlineScript: |
-          # Create the Azure AD app and capture the output
-          output=$(az ad app create --display-name ${{ github.event.inputs.app_name }})
-          
-          # Extract the objectId from the output
-          appObjectId=$(echo "$output" | jq -r '.id')
-
-          # Extract the applicationId from the output
-          appApplicationId=$(echo "$output" | jq -r '.appId')
-          
-          # Write to variables
-          echo "appObjectId=$appObjectId" >> $GITHUB_ENV
-          echo "appApplicationId=$appApplicationId" >> $GITHUB_ENV
 
     # Generate GUID for uniqueness
     - name: Generate GUID
@@ -89,9 +68,6 @@ jobs:
             )
           ' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
 
-        # Replace the original file with the updated one
-        mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
-
     # Update manifest api file
     - name: update manifest api file
       run: |
@@ -101,30 +77,14 @@ jobs:
             .delegatedPermissionIds = [$newGuid]
           )' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
 
-        # Replace the original file with the updated one
-        mv ${{ env.DKE_PATH }}/updated_api.json ${{ env.DKE_PATH }}/manifest_api.json
-
-    # Update app with DKE configuration (configuration related to the DKE)
-    - name: update app with manifest DKE
-      uses: azure/cli@v2
+    # Upload the updated manifest main and api files as artifacts
+    - name: Upload updated manifest files as artifacts
+      uses: actions/upload-artifact@v3
       with:
-        azcliversion: latest
-        inlineScript: |
-          az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}"" \
-          --body @${{ env.DKE_PATH }}/manifest_main.json \
-          --headers "Content-Type=application/json"
-  
-    # Update app with API configuration (client applications that can access the DKE)
-    - name: update  app with manifest API
-      uses: azure/cli@v2
-      with:
-        azcliversion: latest
-        inlineScript: |
-          az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
-          --body @${{ env.DKE_PATH }}/manifest_api.json \
-          --headers "Content-Type=application/json"
+        name: updated-manifest-files
+        path: |
+          ${{ env.DKE_PATH }}/updated_main.json
+          ${{ env.DKE_PATH }}/updated_api.json
 
     - name: logout of azure
       uses: azure/cli@v2
