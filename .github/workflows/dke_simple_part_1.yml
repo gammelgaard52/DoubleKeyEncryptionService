@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       newGuid: ${{ env.NEW_GUID }}
+      tenantId: ${{ env.TENANT_ID}}
 
     steps:   
     - uses: actions/checkout@v3
@@ -43,6 +44,14 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+    # Get tenant ID
+    - name: Get tenant ID
+      id: tenant-id
+      run: |
+        TENANT_ID=$(az account show --query tenantId -o tsv)
+        echo "Generated GUID: $TENANT_ID"
+        echo "TENANT_ID=$TENANT_ID" >> $GITHUB_ENV
 
     # Generate GUID for uniqueness
     - name: Generate GUID
@@ -129,11 +138,10 @@ jobs:
       # Set variables
       - name: Set environment variables
         run: |
-          TENANT_ID=$(az account show --query tenantId -o tsv)
           echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
           echo "newClientId=${{ github.event.inputs.application_client_id }}" >> $GITHUB_ENV
-          echo "newTenantId=$TENANT_ID" >> $GITHUB_ENV
-          echo "newValidIssuer=https://sts.windows.net/$TENANT_ID/" >> $GITHUB_ENV
+          echo "newTenantId=${{ needs.app-registration.outputs.tenantId }}" >> $GITHUB_ENV
+          echo "newValidIssuer=https://sts.windows.net/${{ needs.app-registration.outputs.tenantId }}/" >> $GITHUB_ENV
           echo "newJwtAudience=https://${{ github.event.inputs.cname }}" >> $GITHUB_ENV
           echo "newValueKeyName=${{ env.KEY_NAME }}" >> $GITHUB_ENV
           echo "newValueKeyId=${{ needs.app-registration.outputs.newGuid }}" >> $GITHUB_ENV
