@@ -1,0 +1,297 @@
+name: DKE simple part 1
+
+env:
+  AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  AZURE_WEBAPP_SKU: B1                # Set the SKU used by the app https://azure.microsoft.com/en-us/pricing/details/app-service/windows/#pricing
+  DOTNET_VERSION: '8.*'               # set this to the .net version to use
+  DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
+  KEY_NAME: DemoKey1
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_client_id:
+        description: "Enter the Application ID of the the Application Registration created for DKE"
+        required: true
+      application_object_id:
+        description: "Enter the Object ID of the the Application Registration created for DKE"
+        required: true
+      rg_name:
+        description: "Enter the name of the Resource Group create for the DKE application"
+        required: true
+      app_name:
+        description: "Enter the name of the DKE Application - like: dke-mycompany"
+        required: true
+      cname:
+        description: "Enter the FQDM of the planned URL to reach DKE service - like: dke.companydomain.dk"
+        required: true
+      allowed_emails:
+        description: "Enter the emails allowed to use the DKE service - like: email1@mycompany.dk,email2@mycompany.dk,email3@mycompany.dk"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  app-registration:
+    runs-on: ubuntu-latest
+    outputs:
+      newGuid: ${{ env.NEW_GUID }}
+
+    steps:   
+    - uses: actions/checkout@v3
+
+    # Login to Azure
+    - name: login to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+    # Generate GUID for uniqueness
+    - name: Generate GUID
+      run: |
+        NEW_GUID=$(python3 -c 'import uuid; print(uuid.uuid4())')
+        echo "Generated GUID: $NEW_GUID"
+        echo "NEW_GUID=$NEW_GUID" >> $GITHUB_ENV
+
+    # Update manifest main file
+    - name: update manifest main file
+      run: |
+        # Use jq to update specific keys with appropriate values
+        jq --arg fqdm "${{ github.event.inputs.cname }}" \
+          --arg appName "${{ github.event.inputs.app_name }}" \
+          --arg newGuid "${{ env.NEW_GUID }}" \
+          '.identifierUris = ["https://\($fqdm)"] |
+            .api.oauth2PermissionScopes |= map(
+              .adminConsentDescription = $appName |
+              .adminConsentDisplayName = $appName |
+              .id = $newGuid
+            ) |
+            .web.redirectUriSettings |= map(
+              .uri = "https://\($fqdm)"
+            )' ${{ env.DKE_PATH }}/manifest_main.json > ${{ env.DKE_PATH }}/updated_main.json
+
+        # Replace the original file with the updated one
+        mv ${{ env.DKE_PATH }}/updated_main.json ${{ env.DKE_PATH }}/manifest_main.json
+
+    # Update manifest api file
+    - name: update manifest api file
+      run: |
+        # Use jq to update specific keys with appropriate values
+        jq --arg newGuid "${{ env.NEW_GUID }}" \
+          '.api.preAuthorizedApplications |= map(
+            .delegatedPermissionIds = [$newGuid]
+          )' ${{ env.DKE_PATH }}/manifest_api.json > ${{ env.DKE_PATH }}/updated_api.json
+
+        # Replace the original file with the updated one
+        mv ${{ env.DKE_PATH }}/updated_api.json ${{ env.DKE_PATH }}/manifest_api.json
+
+    # Update app with DKE configuration (configuration related to the DKE)
+    - name: update app with manifest DKE
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az rest --method PATCH \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ github.event.inputs.application_object_id }}"" \
+          --body @${{ env.DKE_PATH }}/manifest_main.json \
+          --headers "Content-Type=application/json"
+  
+    # Update app with API configuration (client applications that can access the DKE)
+    - name: update  app with manifest API
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az rest --method PATCH \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ github.event.inputs.application_object_id }}" \
+          --body @${{ env.DKE_PATH }}/manifest_api.json \
+          --headers "Content-Type=application/json"
+
+    - name: logout of azure
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az logout
+
+  build:
+    runs-on: ubuntu-latest
+    needs: app-registration
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      # Configure .Net
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      # Setup dependencies for .Net
+      - name: Set up dependency caching for faster builds
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # List files in folder
+      - name: List files in folder
+        run: ls $GITHUB_WORKSPACE/src/customer-key-store
+
+      # Create encryption keys
+      - name: Generate SSL Keys
+        run: |
+          KEY_ATTRIBUTES=/C=DK/ST=Jutland/L=Aarhus/O=TDCErhverv/OU=Cloudkey/CN=${{ github.event.inputs.app_name }}"
+          openssl req -x509 -newkey rsa:2048 -keyout $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/cert.pem -days 365 -passout pass:${{ needs.app-registration.outputs.newGuid }} -subj "$KEY_ATTRIBUTES"
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -out $GITHUB_WORKSPACE/privkeynopass.pem -outform PEM -traditional -passin pass:${{ needs.app-registration.outputs.newGuid }}
+          openssl rsa -in $GITHUB_WORKSPACE/key.pem -pubout > $GITHUB_WORKSPACE/pubkeyonly.pem -passin pass:${{ needs.app-registration.outputs.newGuid }}
+
+      # Set variables
+      - name: Set environment variables
+        run: |
+          TENANT_ID=$(az account show --query tenantId -o tsv)
+          echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
+          echo "newClientId=${{ github.event.inputs.application_client_id }}" >> $GITHUB_ENV
+          echo "newTenantId=$TENANT_ID" >> $GITHUB_ENV
+          echo "newValidIssuer=https://sts.windows.net/$TENANT_ID/" >> $GITHUB_ENV
+          echo "newJwtAudience=https://${{ github.event.inputs.cname }}" >> $GITHUB_ENV
+          echo "newValueKeyName=${{ env.KEY_NAME }}" >> $GITHUB_ENV
+          echo "newValueKeyId=${{ needs.app-registration.outputs.newGuid }}" >> $GITHUB_ENV
+          echo "newValueEmail=${{ github.event.inputs.allowed_emails }}" >> $GITHUB_ENV
+          echo "newPublicPem=$GITHUB_WORKSPACE/pubkeyonly.pem" >> $GITHUB_ENV
+          echo "newPrivatePem=$GITHUB_WORKSPACE/privkeynopass.pem" >> $GITHUB_ENV
+  
+      # Replace values in appsettings.json
+      - name: Update JSON file
+        run: python ${{ github.workspace }}/src/customer-key-store/scripts/replace.py
+      
+      # Show the updated JSON
+      - name: Display updated JSON file
+        if: false  # Enable or disable the step
+        run: cat ${{ github.workspace }}/src/customer-key-store/appsettings.json
+
+      # Build the application
+      - name: Build with dotnet
+        run: dotnet build ${{ github.workspace }}/src/customer-key-store/customerkeystore.csproj --configuration Release
+
+      - name: dotnet publish
+        run: dotnet publish ${{ github.workspace }}/src/customer-key-store/customerkeystore.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v3
+        with:
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/myapp
+      
+      # Save certificates for debug purpose
+      - name: Archive Certificates
+        uses: actions/upload-artifact@v3
+        if: false  # Enable or disable the step
+        with:
+          name: certificates
+          path: |
+            privkeynopass.pem
+            pubkeyonly.pem
+
+  setup-azure:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+      - name: Create App Service Plan
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az appservice plan create \
+            --name plan-${{ github.event.inputs.app_name }} \
+            --resource-group ${{ github.event.inputs.rg_name }} \
+            --sku ${{ env.AZURE_WEBAPP_SKU }}
+
+      - name: Create Azure Web App
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az webapp create \
+            --name app-${{ github.event.inputs.app_name }} \
+            --resource-group ${{ github.event.inputs.rg_name }} \
+            --plan plan-${{ github.event.inputs.app_name }} \
+            --runtime "dotnet:8"
+      
+      - name: Logout
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az logout
+
+  deploy-app:
+    runs-on: ubuntu-latest
+    needs: [setup-azure, build]
+    environment:
+      name: 'Development'
+    outputs:
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: .net-app
+
+      # Login to Azure
+      - name: login to azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-${{ github.event.inputs.app_name }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: logout of azure
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az logout
+
+  prepare-outputs:
+    runs-on: ubuntu-latest
+    needs: deploy-app
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set output for next workflow
+        id: set-output
+        run: |
+          echo "cname=${{ github.event.inputs.cname }}" >> $GITHUB_ENV
+          echo "app_name=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          echo "rg_name=${{ github.event.inputs.rg_name }}" >> $GITHUB_ENV
+          echo "app_url=${{ needs.deploy-app.outputs.url }}" >> $GITHUB_ENV
+
+          # Log the outputs as annotations for visibility
+          echo "::notice title=Outputs for part 2::cname: ${{ github.event.inputs.cname }}"
+          echo "::notice title=Outputs for part 2::app_name: ${{ github.event.inputs.app_name }}"
+          echo "::notice title=Outputs for part 2::rg_name: ${{ github.event.inputs.rg_name }}"
+          echo "::notice title=Outputs for part 2::Deployed App URL: ${{ needs.deploy-app.outputs.url }}"
+      
+    outputs:
+      cname: ${{ env.cname }}
+      app_name: ${{ env.app_name }}
+      rg_name: ${{ env.rg_name }}
+      app_url: ${{ env.app_url }}
