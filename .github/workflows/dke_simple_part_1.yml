@@ -270,6 +270,11 @@ jobs:
           echo "::notice title=Outputs for part 2::app_name: ${{ github.event.inputs.app_name }}"
           echo "::notice title=Outputs for part 2::rg_name: ${{ github.event.inputs.rg_name }}"
           echo "::notice title=Outputs for part 2::Deployed App URL: ${{ needs.deploy-app.outputs.url }}"
+
+          # Log instructions for uploading the manifest files
+          echo "::notice title=Manifest Files Upload::Ensure to upload the two manifest files to the Application Registration created for the DKE service. Start with updated_main.json and then updated_api.json."
+          echo "::notice title=Manifest Files Upload::This is the same application used as input for 'application_client_id'."
+          echo "::notice title=Manifest Files Upload::The updated manifest files are 'updated_main.json' and 'updated_api.json', found in the Artifacts section of this Workflow."
       
     outputs:
       cname: ${{ env.cname }}
