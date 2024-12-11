@@ -10,12 +10,6 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      application_client_id:
-        description: "Enter the Application ID of the the Application Registration created for DKE"
-        required: true
-      application_object_id:
-        description: "Enter the Object ID of the the Application Registration created for DKE"
-        required: true
       rg_name:
         description: "Enter the name of the Resource Group create for the DKE application"
         required: true
@@ -36,6 +30,7 @@ jobs:
   app-registration:
     runs-on: ubuntu-latest
     outputs:
+      applicationId: ${{ env.appApplicationId }}
       newGuid: ${{ env.NEW_GUID }}
 
     steps:   
@@ -46,6 +41,26 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+
+    # Create app
+    - name: create app
+      uses: azure/cli@v2
+      id: create-app
+      with:
+        azcliversion: latest
+        inlineScript: |
+          # Create the Azure AD app and capture the output
+          output=$(az ad app create --display-name ${{ github.event.inputs.app_name }})
+          
+          # Extract the objectId from the output
+          appObjectId=$(echo "$output" | jq -r '.id')
+
+          # Extract the applicationId from the output
+          appApplicationId=$(echo "$output" | jq -r '.appId')
+          
+          # Write to variables
+          echo "appObjectId=$appObjectId" >> $GITHUB_ENV
+          echo "appApplicationId=$appApplicationId" >> $GITHUB_ENV
 
     # Generate GUID for uniqueness
     - name: Generate GUID
@@ -93,7 +108,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ github.event.inputs.application_object_id }}"" \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}"" \
           --body @${{ env.DKE_PATH }}/manifest_main.json \
           --headers "Content-Type=application/json"
   
@@ -104,7 +119,7 @@ jobs:
         azcliversion: latest
         inlineScript: |
           az rest --method PATCH \
-          --uri "https://graph.microsoft.com/v1.0/applications/${{ github.event.inputs.application_object_id }}" \
+          --uri "https://graph.microsoft.com/v1.0/applications/${{ env.appObjectId }}" \
           --body @${{ env.DKE_PATH }}/manifest_api.json \
           --headers "Content-Type=application/json"
 
@@ -154,7 +169,7 @@ jobs:
         run: |
           TENANT_ID=$(az account show --query tenantId -o tsv)
           echo "JSON_FILE_PATH="${{ github.workspace }}/src/customer-key-store/appsettings.json"" >> $GITHUB_ENV
-          echo "newClientId=${{ github.event.inputs.application_client_id }}" >> $GITHUB_ENV
+          echo "newClientId=${{ needs.app-registration.outputs.applicationId }}" >> $GITHUB_ENV
           echo "newTenantId=$TENANT_ID" >> $GITHUB_ENV
           echo "newValidIssuer=https://sts.windows.net/$TENANT_ID/" >> $GITHUB_ENV
           echo "newJwtAudience=https://${{ github.event.inputs.cname }}" >> $GITHUB_ENV
