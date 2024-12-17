@@ -7,7 +7,8 @@ The guide is intended for cases where a simple demonstration of [DKE](https://le
 1. [Fork repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo)
 2. [Ensure permissions](#permissions)
 3. [Add Azure services](#az_services)
-4. [Execute DKE deployment](#workflow)
+4. [Execute DKE deployment](#workflow-part1)
+5. [Update application permissions](#workflow-part1-finalize)
 
 ## Permissions required<a name="permissions"></a>
 
@@ -64,6 +65,6 @@ Execute workflow named **DKE simple part 1** and fill in the following parameter
 
 ![Workflow parameters](.github/pictures/workflow_1.jpg)
 
-## Update Application Registration
+## Update Application Registration<a name="workflow-part1-finalize"></a>
 
 ## Deploy DKE service - part 2<a name="workflow-part2"></a>
