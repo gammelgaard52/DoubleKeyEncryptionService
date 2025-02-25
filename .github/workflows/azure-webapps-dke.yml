@@ -304,14 +304,14 @@ jobs:
         run: dotnet publish ${{ github.workspace }}/src/customer-key-store/customerkeystore.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
       
       # Save certificates for debug purpose
       - name: Archive Certificates
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: false  # Enable or disable the step
         with:
           name: certificates
