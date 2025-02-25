@@ -37,7 +37,7 @@ jobs:
     - name: login to Azure
       uses: azure/login@v2
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     # Update account in permission file
     - name: update parameter file
@@ -146,7 +146,7 @@ jobs:
     - name: login to Azure
       uses: azure/login@v2
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
   
     # Create app
     - name: create app
@@ -328,7 +328,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Create Resource Group
         uses: azure/cli@v2
@@ -384,7 +384,7 @@ jobs:
       - name: login to azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -410,7 +410,7 @@ jobs:
         - name: login to azure
           uses: azure/login@v2
           with:
-            creds: ${{ secrets.AZURE_CREDENTIALS_SUB_PLATFORM_DKE }}
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
                     
         # Install Azure Resource Graph extension
         - name: Install az graph extension
