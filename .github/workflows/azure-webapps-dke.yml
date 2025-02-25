@@ -1,16 +1,23 @@
 name: Build and deploy DKE solution
 
 env:
-  AZURE_WEBAPP_NAME: app-demo-dke-december-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
+  AZURE_WEBAPP_NAME: app-demo-dke-${{ github.run_id }}    # set this to the name of your Azure Web App including the runID of the GitHub Workflow
   AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
   AZURE_WEBAPP_SKU: B1                # Set the SKU used by the app https://azure.microsoft.com/en-us/pricing/details/app-service/windows/#pricing
-  AZURE_REGION: westeurope            # Set to your desired Azure region
   DOTNET_VERSION: '8.*'               # set this to the .net version to use
-  DOMAIN_NAME: pocproject0.com        # set domain name of tenant
   DKE_PATH: iac/application/dke       # set path to the folder there DKE files are located
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select the environment"
+        required: true
+        default: "Development"
+        type: choice
+        options:
+          - Development
+          - Licenstest.net
 
 permissions:
   contents: read
@@ -18,6 +25,7 @@ permissions:
 jobs:
   app-registration:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Dynamically set environment
     outputs:
       applicationId: ${{ env.appApplicationId }}
       newGuid: ${{ env.NEW_GUID }}
@@ -171,7 +179,7 @@ jobs:
     - name: update manifest main file
       run: |
         # Use jq to update specific keys with appropriate values
-        jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" \
+        jq --arg fqdm "${{ env.AZURE_WEBAPP_NAME }}.${{ vars.DOMAIN_NAME }}" \
           --arg appName "${{ env.AZURE_WEBAPP_NAME }}" \
           --arg newGuid "${{ env.NEW_GUID }}" \
           '
@@ -233,6 +241,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Dynamically set environment
     needs: app-registration
 
     steps:
@@ -271,7 +280,7 @@ jobs:
           echo "newClientId=${{ needs.app-registration.outputs.applicationId }}" >> $GITHUB_ENV
           echo "newTenantId=${{vars.TENANT_ID }}" >> $GITHUB_ENV
           echo "newValidIssuer=${{vars.VALID_ISSUER}}" >> $GITHUB_ENV
-          echo "newJwtAudience=https://${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}" >> $GITHUB_ENV
+          echo "newJwtAudience=https://${{ env.AZURE_WEBAPP_NAME }}.${{ vars.DOMAIN_NAME }}" >> $GITHUB_ENV
           echo "newValueKeyName=${{vars.KEY_NAME}}" >> $GITHUB_ENV
           echo "newValueKeyId=${{ needs.app-registration.outputs.newGuid }}" >> $GITHUB_ENV
           echo "newValueEmail=${{vars.EMAILS}}" >> $GITHUB_ENV
@@ -312,6 +321,7 @@ jobs:
 
   setup-azure:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Dynamically set environment
     permissions:
       id-token: write
     steps:
@@ -325,7 +335,7 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
-            az group create --name rg-${{ env.AZURE_WEBAPP_NAME }} --location ${{ env.AZURE_REGION }}
+            az group create --name rg-${{ env.AZURE_WEBAPP_NAME }} --location ${{ vars.AZURE_REGION }}
 
       - name: Create App Service Plan
         uses: azure/cli@v2
@@ -357,9 +367,8 @@ jobs:
 
   deploy-app:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Dynamically set environment
     needs: [setup-azure, build]
-    environment:
-      name: 'Development'
     outputs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
@@ -393,6 +402,7 @@ jobs:
 
   configure-dns:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Dynamically set environment
     needs: deploy-app
 
     steps:
@@ -434,7 +444,7 @@ jobs:
                 RETRY_COUNT=0
                 RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
                 CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
-                DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+                DOMAIN_NAME="${{ vars.DOMAIN_NAME }}"
                 AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
                 AZURE_DNS_RESOURCE_GROUP="${{ secrets.AZURE_DNS_RESOURCE_GROUP }}"
                 
@@ -499,7 +509,7 @@ jobs:
             SLEEP_DURATION=30  # 30 seconds delay between retries
             RETRY_COUNT=0
             RECORD_NAME="asuid.${{ env.AZURE_WEBAPP_NAME }}"
-            DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+            DOMAIN_NAME="${{ vars.DOMAIN_NAME }}"
             CUSTOM_DOMAIN_VERIFICATION_ID="${{ env.CUSTOM_DOMAIN_VERIFICATION_ID }}"
 
             echo "Verifying TXT record externally..."
@@ -533,8 +543,8 @@ jobs:
                 SLEEP_DURATION=15  # 30 seconds delay between retries
                 RETRY_COUNT=0
                 DESTINATION_DNS=$(echo "${{ needs.deploy-app.outputs.url }}" | sed 's|https\?://||')
-                SOURCE_DNS="${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}"
-                DOMAIN_NAME="${{ env.DOMAIN_NAME }}"
+                SOURCE_DNS="${{ env.AZURE_WEBAPP_NAME }}.${{ vars.DOMAIN_NAME }}"
+                DOMAIN_NAME="${{ vars.DOMAIN_NAME }}"
                 AZURE_DNS_SUBSCRIPTION_ID="${{ secrets.AZURE_DNS_SUBSCRIPTION_ID }}"
                 AZURE_DNS_RESOURCE_GROUP="${{ secrets.AZURE_DNS_RESOURCE_GROUP }}"
                 AZURE_APP_NAME="${{ env.AZURE_WEBAPP_NAME }}"
@@ -602,7 +612,7 @@ jobs:
                 az webapp config hostname add \
                 --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
                 --webapp-name ${{ env.AZURE_WEBAPP_NAME }} \
-                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }}
+                --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ vars.DOMAIN_NAME }}
 
         # Enable HTTPS for Custom Domain
         - name: Enable HTTPS for Custom Domain
@@ -618,7 +628,7 @@ jobs:
                 --certificate-thumbprint $(az webapp config ssl create \
                     --resource-group rg-${{ env.AZURE_WEBAPP_NAME }} \
                     --name ${{ env.AZURE_WEBAPP_NAME }} \
-                    --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ env.DOMAIN_NAME }} \
+                    --hostname ${{ env.AZURE_WEBAPP_NAME }}.${{ vars.DOMAIN_NAME }} \
                     --query "thumbprint" -o tsv)
 
         - name: logout of azure
